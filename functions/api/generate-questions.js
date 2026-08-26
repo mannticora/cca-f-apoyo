@@ -99,7 +99,9 @@ async function callAnthropic(apiKey, sourceText, needed, avoidQuestions) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 8192,
+      // ~700 tokens/pregunta (escenario + opciones + explicación detallada) da margen amplio;
+      // sin esto, pedir 20 preguntas de una vez se puede cortar a medias (JSON incompleto del tool_use).
+      max_tokens: Math.min(24000, 2000 + needed * 700),
       system: systemPrompt(needed, avoidQuestions),
       messages: [{ role: "user", content: "Source text:\n\n" + sourceText }],
       tools: [toolSchema(needed)],
@@ -117,7 +119,10 @@ async function callAnthropic(apiKey, sourceText, needed, avoidQuestions) {
 
   const data = await res.json();
   const toolUse = (data.content || []).find(b => b.type === "tool_use" && b.name === "return_questions");
-  if (!toolUse || !toolUse.input || !Array.isArray(toolUse.input.questions)) return [];
+  if (!toolUse || !toolUse.input || !Array.isArray(toolUse.input.questions)) {
+    // Salida truncada por max_tokens u otro formato inesperado: no hay nada útil que rescatar de este intento.
+    return [];
+  }
 
   return toolUse.input.questions
     .filter(q => q && typeof q.question === "string" && Array.isArray(q.options) && q.options.length === 4 &&
