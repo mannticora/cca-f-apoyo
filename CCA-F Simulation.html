@@ -1602,20 +1602,26 @@ el("doc-download-pdf-btn").onclick = () => {
 };
 
 // ---- Generar preguntas desde un PDF (Admin) ----
-const PDF_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
+const PDF_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 let pdfGeneratedQuestions = [];
 let pdfGeneratedLabel = "";
 
-async function extractPdfText(file) {
+const PDF_EXTRACT_TEXT_CAP = 65000; // un poco más que el límite del servidor (60000), para no cortar de menos
+
+async function extractPdfText(file, onProgress) {
   const pdfjsLib = await import("./CCA-F Simulation_files/pdf.mjs");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "./CCA-F Simulation_files/pdf.worker.mjs";
   const buf = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   let text = "";
   for (let i = 1; i <= doc.numPages; i++) {
+    if (onProgress) onProgress(i, doc.numPages);
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     text += content.items.map(it => it.str).join(" ") + "\n\n";
+    // Corta antes si ya alcanzamos suficiente texto — evita procesar cientos de páginas de más
+    // en documentos grandes cuando el servidor solo va a usar los primeros ~60,000 caracteres.
+    if (text.length >= PDF_EXTRACT_TEXT_CAP) break;
   }
   return text.trim();
 }
@@ -1629,7 +1635,7 @@ el("pdf-generate-btn").onclick = async () => {
 
   const file = fileInput.files && fileInput.files[0];
   if (!file) { statusEl.textContent = "Primero elige un archivo PDF."; return; }
-  if (file.size > PDF_UPLOAD_MAX_BYTES) { statusEl.textContent = "El PDF pesa demasiado (máximo 15 MB)."; return; }
+  if (file.size > PDF_UPLOAD_MAX_BYTES) { statusEl.textContent = "El PDF pesa demasiado (máximo 50 MB)."; return; }
 
   const count = parseInt(el("pdf-question-count-select").value, 10) || 10;
   const btn = el("pdf-generate-btn");
@@ -1637,7 +1643,9 @@ el("pdf-generate-btn").onclick = async () => {
 
   try {
     statusEl.textContent = "Extrayendo texto del PDF…";
-    const text = await extractPdfText(file);
+    const text = await extractPdfText(file, (page, total) => {
+      statusEl.textContent = "Extrayendo texto del PDF… página " + page + " de " + total;
+    });
     if (text.length < 200) {
       statusEl.textContent = "No se pudo extraer suficiente texto de este PDF (¿está escaneado como imagen?).";
       return;
