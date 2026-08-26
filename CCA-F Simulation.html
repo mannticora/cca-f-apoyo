@@ -753,7 +753,7 @@ const domains = [
   ]}
 ];
 
-const LIVE_QUESTIONS = [
+const D3_ORIGINAL_QUESTIONS = [
   { qNum: 1, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A 12-person team runs the same release-verification checklist before every deploy. Originally documented in a wiki, each engineer copy-pasted it into their own ~/.claude/CLAUDE.md six months ago \"to keep it handy.\" Over time, three engineers added extra steps to their personal copies while two others deleted steps they found redundant, and nobody currently owns a single canonical version. A new hire asks where the actual current process lives. What is the most effective fix?", options: ["Consolidate the steps into the project's shared CLAUDE.md, committed to the repository, and have everyone delete their personal copies.", "Ask the team to synchronize their personal CLAUDE.md files by comparing them in a meeting.", "Add a note at the top of each personal CLAUDE.md saying \"see the wiki for the real version.\"", "Convert the checklist into a Skill invoked with /verify-release so no one needs to remember it."], correct: 0, why: "Why: A procedure that every project member must follow identically belongs in project-scope, version-controlled CLAUDE.md — the team standard that's always loaded, for everyone who clones the repo. A Skill (D) is model-invoked and doesn't resolve why five personal copies diverged in the first place; a release checklist that must run before every deploy is closer to \"always applies\" content. B and C don't fix anything structurally, they just manage the symptom." },
   { qNum: 2, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A data engineering team has an eight-step data pipeline (extract, validate schema, dedupe, transform, load staging, run quality checks, promote to production, notify) that a human explicitly triggers about twice a week, always in that exact fixed order, whenever a new vendor file arrives. Currently, whoever remembers is the one who pastes the eight steps at the top of a fresh conversation, and two engineers have slightly different pasted versions that have drifted from each other. What is the most appropriate fix?", options: ["A Skill in .claude/skills/, because it packages a capability the model can decide to invoke.", "A custom slash command in .claude/commands/, because a human explicitly decides when this exact procedure should run.", "A CLAUDE.md section, because it should be loaded automatically every session.", "A rule in .claude/rules/ scoped to the vendor-file folder with a glob pattern."], correct: 1, why: "Why: The defining signal is \"a human decides when it applies\" — that is the slash command definition. A Skill is model-invoked, risking it firing unprompted. A CLAUDE.md section would load this eight-step content into every unrelated session, wasting context on procedures nobody needs that day. A path-scoped rule applies to file-type conventions triggered by touching matching paths, not to a human-triggered multi-step action." },
   { qNum: 3, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A monorepo has test files scattered throughout the codebase, living next to the code they test rather than in a single tests/ directory — a convention the team likes because it keeps tests close to implementation. They want Claude to always follow the same arrange-act-assert pattern and one-assert-per-test rule whenever it touches any file ending in .test.tsx or .spec.ts, no matter which folder that file is in, without loading that guidance when Claude is working on unrelated files. What's the correct mechanism?", options: ["A CLAUDE.md file placed in each subdirectory that contains test files.", "A file in .claude/rules/ with a paths field matching **/*.test.tsx and **/*.spec.ts in its YAML frontmatter.", "A Skill invoked manually with /test-conventions before writing any test.", "A single root-level CLAUDE.md section titled \"Testing,\" relying on Claude to recognize when it's relevant."], correct: 1, why: "Why: Because the convention follows a file TYPE, not a folder, only a path-scoped rule with a glob pattern captures every matching file across the whole repo without a human remembering to invoke anything or every session paying the context cost. A CLAUDE.md per subdirectory works when conventions follow folders — not when they're type-based and scattered." },
@@ -1319,7 +1319,7 @@ const NEW_QUESTIONS_D5 = [
   }
 ];
 
-function buildDocQuestionBank() {
+function buildFullQuestionBank() {
   const domainMeta = {
     D1: "Agentic Architecture & Orchestration",
     D2: "Tool Design & MCP Integration",
@@ -1327,8 +1327,8 @@ function buildDocQuestionBank() {
     D4: "Prompt Engineering & Structured Output",
     D5: "Context Management & Reliability"
   };
-  const fromDomains = domains.flatMap(d => d.questions.map(q => Object.assign({ domainCode: d.code, domainName: d.name }, q)));
-  const fromLive = LIVE_QUESTIONS.map(q => ({
+  const fromDomains = domains.flatMap(d => d.questions.map(q => Object.assign({ domainCode: d.code, domainName: d.name, scenario: q.scenario || "" }, q)));
+  const fromD3Original = D3_ORIGINAL_QUESTIONS.map(q => ({
     domainCode: q.domainCode, domainName: q.domainName, scenario: "", question: q.question,
     options: q.options, correct: q.correct, why: q.why, source: "Domain 3 — " + q.domainName, doc: DOCS.cli
   }));
@@ -1339,9 +1339,18 @@ function buildDocQuestionBank() {
     ...NEW_QUESTIONS_D4.map(q => tagNew(q, "D4")),
     ...NEW_QUESTIONS_D5.map(q => tagNew(q, "D5"))
   ];
-  return [...fromDomains, ...fromLive, ...fromNew];
+  const merged = [...fromDomains, ...fromD3Original, ...fromNew];
+  merged.forEach((q, i) => { q.qNum = i + 1; });
+  return merged;
 }
-const DOC_QUESTION_BANK = buildDocQuestionBank();
+// Banco completo (97 preguntas, 5 dominios) — fuente única para el Documento de Estudio y para las Sesiones Live.
+const FULL_QUESTION_BANK = buildFullQuestionBank();
+const DOC_QUESTION_BANK = FULL_QUESTION_BANK;
+// Vista para Sesiones Live: el escenario se integra al texto de la pregunta porque la pantalla de quiz Live
+// solo renderiza q.question (no tiene un bloque de escenario separado como el examen individual).
+const LIVE_QUESTIONS = FULL_QUESTION_BANK.map(q => q.scenario
+  ? Object.assign({}, q, { question: q.scenario + " " + q.question })
+  : q);
 
 function pickBalancedQuestions(n) {
   const byDomain = {};
