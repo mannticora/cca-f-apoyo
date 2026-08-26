@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<!-- saved from url=(0044)https://iridescent-sable-1b725e.netlify.app/ -->
+<html lang="en" data-theme="dark"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=ai-legible&utm_source=comment&utm_medium=referral&utm_id=a5eaf066-16d2-4147-9996-c61df1676171
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<meta name="hosting-provider" content="Netlify">
+<meta name="netlify-deploy" content="https://netlify.new/?utm_campaign=ai-legible&amp;utm_source=meta&amp;utm_medium=referral&amp;utm_id=a5eaf066-16d2-4147-9996-c61df1676171">
+<title>CCA-F Simulation</title>
+<script src="./CCA-F Simulation_files/jspdf.umd.min.js.download"></script>
+<script src="./CCA-F Simulation_files/firebase-app-compat.js.download"></script>
+<script src="./CCA-F Simulation_files/firebase-firestore-compat.js.download"></script>
+<style>
+  :root {
+    --accent: #D97757;
+    --accent-dim: #B4623F;
+    --correct: #34C77B;
+    --correct-tint: #163425;
+    --wrong: #F0645A;
+    --wrong-tint: #3A1E1B;
+    --grey: #9C968A;
+    --grey-dim: #6E695F;
+    --black: #F2EEE6;
+    --white: #1E1D1B;
+    --bg-page: #0D0D0C;
+    --bg-card: #18726A17;
+    --bg-card2: #1A1918;
+    --bg-scenario: #221F1C;
+    --border: #302E2A;
+    --d1: #4F8EF7;
+    --d2: #14B8A6;
+    --d3: #9B6BFF;
+    --d4: #F5A623;
+    --d5: #FB7185;
+  }
+  html[data-theme="light"] {
+    --accent: #C05F3C;
+    --accent-dim: #A34D2E;
+    --correct: #1F9D5C;
+    --correct-tint: #E1F5EA;
+    --wrong: #D6483D;
+    --wrong-tint: #FBE7E5;
+    --grey: #6B6558;
+    --grey-dim: #8B8578;
+    --black: #22201C;
+    --white: #FFFFFF;
+    --bg-page: #FAF7F2;
+    --bg-card: #F0EAE0;
+    --bg-card2: #FFFFFF;
+    --bg-scenario: #F2ECE2;
+    --border: #E2DCCF;
+    --d1: #2B6FD1;
+    --d2: #0F8F80;
+    --d3: #7C4FDB;
+    --d4: #C6820F;
+    --d5: #D14F68;
+  }
+  .theme-toggle-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    color: var(--black);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 100;
+  }
+  .theme-toggle-btn:hover { border-color: var(--accent); }
+  .live-session-timer {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    color: var(--black);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: inherit;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-session-timer .live-dot { margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg-page);
+    color: var(--black);
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    line-height: 1.55;
+  }
+  h1 { font-size: 26px; color: var(--accent); margin: 0 0 20px; }
+  h2 { font-size: 20px; color: var(--accent); margin: 0 0 14px; }
+  .subtitle { color: var(--grey); font-size: 14px; margin: 0 0 28px; font-style: italic; }
+  .card {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .pill {
+    display: inline-block;
+    background: var(--accent);
+    color: #241109;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+  input[type="text"], input[type="email"], select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    margin-bottom: 4px;
+    background: var(--bg-page);
+    color: var(--black);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  input[type="text"]:focus, input[type="email"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .email-field-wrap {
+    position: relative;
+  }
+  .email-field-wrap::before {
+    content: "✉";
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--accent);
+    pointer-events: none;
+  }
+  .email-field-wrap input[type="email"] {
+    padding: 14px 14px 14px 42px;
+    font-size: 17px;
+    border-radius: 10px;
+    border-width: 1.5px;
+    background: var(--bg-page);
+  }
+  .email-field-wrap input[type="email"]::placeholder {
+    color: var(--grey-dim);
+  }
+  button.primary {
+    background: var(--accent);
+    color: #241109;
+    border: none;
+    border-radius: 8px;
+    padding: 13px 22px;
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+  }
+  button.primary:disabled { background: #4A463F; color: var(--grey); cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 11px 18px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--grey); margin-bottom: 10px; }
+  .domain-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .scenario-box {
+    background: var(--bg-scenario);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-style: italic;
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+  .question-text { font-weight: bold; font-size: 17px; margin-bottom: 16px; color: var(--black); }
+  .option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 13px 16px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card2);
+    color: var(--black);
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .option:hover:not(:disabled) { border-color: var(--accent); }
+  .option.selected-correct { border-color: var(--correct); background: var(--correct-tint); }
+  .option.selected-wrong { border-color: var(--wrong); background: var(--wrong-tint); }
+  .option.reveal-correct { border-color: var(--correct); background: var(--correct-tint); }
+  .option.selected-pending { border-color: var(--accent); background: var(--bg-scenario); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .question-nav-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 6px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .question-nav-btn {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-page);
+    color: var(--grey);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .question-nav-btn.nav-answered { border-color: var(--correct); color: var(--correct); background: var(--correct-tint); }
+  .question-nav-btn.nav-current { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .offline-banner {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .offline-banner.showing { display: flex; }
+  .offline-banner-card {
+    background: var(--bg-card2);
+    border: 1px solid var(--wrong);
+    border-radius: 14px;
+    padding: 28px 26px;
+    max-width: 360px;
+    color: var(--black);
+  }
+  .offline-banner-card .live-dot { background: var(--wrong); }
+  .option:disabled { cursor: default; }
+  .option-letter { font-weight: bold; margin-right: 8px; }
+  .feedback {
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 18px 0;
+  }
+  .feedback.correct { background: var(--correct-tint); border: 1px solid var(--correct); }
+  .feedback.wrong { background: var(--wrong-tint); border: 1px solid var(--wrong); }
+  .feedback-title { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+  .feedback.correct .feedback-title { color: var(--correct); }
+  .feedback.wrong .feedback-title { color: var(--wrong); }
+  .compare-row { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .compare-box { flex: 1; min-width: 220px; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .compare-box.mine { background: var(--wrong-tint); border: 1px solid var(--wrong); }
+  .compare-box.correctone { background: var(--correct-tint); border: 1px solid var(--correct); }
+  .compare-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; margin-bottom: 4px; color: var(--grey); }
+  .explanation { font-size: 15px; margin-top: 10px; color: var(--black); }
+  .learn-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: bold;
+    text-decoration: none;
+  }
+  .learn-more:hover { text-decoration: underline; }
+  .source-tag { font-size: 12px; color: var(--grey); font-style: italic; margin-top: 8px; }
+  .nav-row { display: flex; gap: 10px; margin-top: 18px; }
+  .score-summary { text-align: center; padding: 10px 0 20px; }
+  .score-big { font-size: 48px; font-weight: bold; color: var(--accent); margin: 10px 0 4px; }
+  .grade-badge {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 5px 16px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .grade-badge.pass { background: var(--correct-tint); color: var(--correct); }
+  .grade-badge.fail { background: var(--wrong-tint); color: var(--wrong); }
+  .cutoff-note { font-size: 12px; color: var(--grey); }
+  .domain-score-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .monitor-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .monitor-table th { text-align: left; font-size: 12px; text-transform: uppercase; color: var(--grey); padding: 6px 8px; border-bottom: 2px solid var(--border); }
+  .monitor-table td { padding: 9px 8px; border-bottom: 1px solid var(--border); }
+  .status-chip { font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 12px; }
+  .status-chip.progress { background: #3A2F14; color: #F5A623; }
+  .status-chip.done-pass { background: var(--correct-tint); color: var(--correct); }
+  .status-chip.done-fail { background: var(--wrong-tint); color: var(--wrong); }
+  .hidden { display: none; }
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--correct); margin-right: 6px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* ---- Plataforma: registro / menú / historial / admin ---- */
+  .role-row { display: flex; gap: 10px; margin-top: 8px; }
+  .role-option {
+    flex: 1;
+    text-align: center;
+    padding: 12px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-page);
+    color: var(--grey);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .role-option.active { border-color: var(--accent); color: var(--accent); background: var(--bg-card2); }
+  .field-error { color: var(--wrong); font-size: 13px; margin-top: 6px; display: none; }
+  .badge-admin { display: inline-block; background: var(--d3); color: #1a1030; font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 20px; margin-left: 8px; vertical-align: middle; }
+  .welcome-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .welcome-name { font-size: 15px; }
+  .link-btn { background: none; border: none; color: var(--grey); font-size: 13px; text-decoration: underline; cursor: pointer; font-family: inherit; padding: 0; }
+  .menu-grid { display: flex; flex-direction: column; gap: 12px; }
+  .menu-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--black);
+  }
+  .menu-card:hover:not(:disabled) { border-color: var(--accent); }
+  .menu-card:disabled { opacity: 0.45; cursor: not-allowed; }
+  .menu-card-title { font-size: 17px; font-weight: bold; margin-bottom: 4px; }
+  .menu-card-desc { font-size: 13px; color: var(--grey); }
+  .menu-card-soon { display: inline-block; font-size: 11px; color: var(--grey); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px; margin-left: 8px; }
+  .history-item {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .history-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .history-type { font-weight: bold; font-size: 15px; }
+  .history-date { font-size: 12px; color: var(--grey); }
+  .history-bar-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0 6px; }
+  .history-bar-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
+  .history-bottom { display: flex; justify-content: space-between; font-size: 13px; color: var(--grey); }
+  .history-score { font-weight: bold; }
+  .empty-state { text-align: center; color: var(--grey); padding: 40px 10px; font-size: 15px; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle-btn" id="theme-toggle-btn">☀️ Claro</button>
+<div class="live-session-timer hidden" id="live-session-timer"><span class="live-dot"></span><span id="live-session-timer-label">20:00</span></div>
+<h1>CCA-F Prep Platform</h1>
+
+<!-- SCREEN CONFIG: CONFIGURACIÓN DE FIREBASE (solo la primera vez en este navegador) -->
+<div id="screen-firebase-config" class="hidden">
+  <div class="card">
+    <div class="pill">Configuración inicial</div>
+    <div style="margin-bottom:10px; font-weight:bold;">Conecta tu base de datos de Firebase</div>
+    <div style="font-size:13px; color:var(--grey); margin-bottom:10px;">
+      Pega aquí el bloque <code>firebaseConfig</code> que copiaste de la consola de Firebase (Configuración del proyecto → Tus apps → Web). Solo tienes que hacerlo una vez por navegador; queda guardado en este dispositivo.
+    </div>
+    <textarea id="firebase-config-input" rows="8" placeholder="{
+  &quot;apiKey&quot;: &quot;...&quot;,
+  &quot;authDomain&quot;: &quot;...&quot;,
+  &quot;projectId&quot;: &quot;...&quot;,
+  &quot;storageBucket&quot;: &quot;...&quot;,
+  &quot;messagingSenderId&quot;: &quot;...&quot;,
+  &quot;appId&quot;: &quot;...&quot;
+}" style="width:100%; background:var(--bg-page); color:var(--black); border:1px solid var(--border); border-radius:8px; padding:12px; font-family: monospace; font-size:13px;"></textarea>
+    <div class="field-error" id="firebase-config-error">No pude leer esa configuración. Verifica que sea el objeto completo copiado de Firebase.</div>
+  </div>
+  <button class="primary" id="save-firebase-config-btn">Guardar y continuar</button>
+  <div style="text-align:center; margin-top:12px; font-size:12px; color:var(--grey);" id="firebase-config-status"></div>
+</div>
+
+<!-- SCREEN 0: REGISTRO -->
+<div id="screen-register" class="hidden">
+  <div class="card">
+    <div class="pill">Paso 1</div>
+    <div style="margin-bottom:10px; font-weight:bold;">Tu correo electrónico</div>
+    <div class="email-field-wrap">
+      <input type="email" id="email-input" placeholder="maria@empresa.com">
+    </div>
+    <div style="font-size:12px; color:var(--grey); margin-top:6px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, recuperamos tu nombre automáticamente.</div>
+    <div class="field-error" id="email-error">Escribe un correo válido para continuar.</div>
+  </div>
+  <div class="card">
+    <div class="pill">Paso 2</div>
+    <div style="margin-bottom:10px; font-weight:bold;">¿Cuál es tu nombre?</div>
+    <input type="text" id="name-input" placeholder="Ej. María">
+  </div>
+  <div class="card">
+    <div class="pill">Paso 3</div>
+    <div style="margin-bottom:10px; font-weight:bold;">¿Con qué rol entras?</div>
+    <div class="role-row">
+      <div class="role-option active" id="role-user-btn">Usuario</div>
+      <div class="role-option" id="role-admin-btn">Admin</div>
+    </div>
+    <div id="admin-pin-wrap" class="hidden" style="margin-top:12px;">
+      <input type="text" id="admin-pin-input" placeholder="PIN de Admin">
+      <div class="field-error" id="admin-pin-error">PIN incorrecto. Intenta de nuevo.</div>
+    </div>
+  </div>
+  <button class="primary" id="register-btn">Entrar</button>
+</div>
+
+<!-- SCREEN MENU: MENÚ PRINCIPAL -->
+<div id="screen-menu" class="hidden">
+  <div class="welcome-row">
+    <div class="welcome-name">Hola, <strong id="menu-user-name">Ricardo</strong><span id="menu-admin-badge" class="badge-admin">ADMIN</span></div>
+    <button class="link-btn" id="switch-user-btn">Cambiar usuario</button>
+  </div>
+  <div class="menu-grid">
+    <button class="menu-card" id="menu-async-btn">
+      <div class="menu-card-title">Examen asíncrono</div>
+      <div class="menu-card-desc">Examen general (30 preguntas mezcladas) con retroalimentación inmediata. Los módulos por dominio llegan en la Fase 2.</div>
+    </button>
+    <button class="menu-card" id="menu-modules-btn">
+      <div class="menu-card-title">Módulos por dominio</div>
+      <div class="menu-card-desc">Practica un dominio a la vez (D1-D5), con tu propio historial por módulo.</div>
+    </button>
+    <button class="menu-card" id="menu-live-btn">
+      <div class="menu-card-title">Sesión en vivo</div>
+      <div class="menu-card-desc">Únete con el código que te dé tu Admin. 20 preguntas sincronizadas, sin ver respuestas hasta el final.</div>
+    </button>
+    <button class="menu-card" id="menu-history-btn">
+      <div class="menu-card-title">Mi historial</div>
+      <div class="menu-card-desc">Consulta tus intentos anteriores, puntaje y progreso.</div>
+    </button>
+    <button class="menu-card" id="menu-admin-panel-btn">
+      <div class="menu-card-title">Panel Admin</div>
+      <div class="menu-card-desc">Crear una sesión en vivo y compartir el código con el grupo.</div>
+    </button>
+  </div>
+</div>
+
+<!-- SCREEN HISTORY: HISTORIAL -->
+<div id="screen-history" class="hidden">
+  <h2>Mi historial</h2>
+  <div id="history-list"></div>
+  <button class="secondary" id="back-from-history-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
+</div>
+
+<!-- SCREEN MODULES: SELECCIÓN DE MÓDULO -->
+<div id="screen-modules" class="hidden">
+  <h2>Elige un módulo</h2>
+  <div style="font-size:13px; color:var(--grey); margin-bottom:16px;">Cada módulo incluye todas las preguntas disponibles de ese dominio en el banco actual.</div>
+  <div class="menu-grid" id="modules-list"></div>
+  <button class="secondary" id="back-from-modules-btn" style="width:100%; margin-top:14px;">Volver al menú</button>
+</div>
+
+<!-- SCREEN ADMIN CREATE: CREAR SESIÓN LIVE -->
+<div id="screen-admin-create" class="">
+  <h2>Panel Admin</h2>
+
+  <div class="card">
+    <div class="pill">Crear nueva sesión</div>
+    <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
+    <select id="live-question-count-select">
+      <option value="5">5 preguntas</option>
+      <option value="10">10 preguntas</option>
+      <option value="15">15 preguntas</option>
+      <option value="20" selected="">20 preguntas</option>
+    </select>
+    <div style="margin:14px 0 8px; font-weight:bold;">Duración por persona</div>
+    <select id="live-duration-select">
+      <option value="10">10 minutos</option>
+      <option value="15">15 minutos</option>
+      <option value="20">20 minutos</option>
+      <option value="25" selected="">25 minutos</option>
+      <option value="30">30 minutos</option>
+      <option value="45">45 minutos</option>
+      <option value="60">60 minutos</option>
+    </select>
+    <div style="font-size:12px; color:var(--grey); margin-top:10px;">Cada participante avanza a su propio ritmo con su botón "Siguiente". El cronómetro empieza para cada quien en el momento en que entra a la sesión, no de forma sincronizada.</div>
+  </div>
+  <button class="primary" id="create-live-btn">Generar código y crear sesión</button>
+
+  <div id="admin-created-wrap" class="hidden" style="margin-top:20px;">
+    <div class="card" style="text-align:center;">
+      <div class="pill">Código de sesión</div>
+      <div style="font-size:34px; font-weight:bold; letter-spacing:2px; color:var(--accent);" id="admin-live-code"></div>
+      <div style="font-size:13px; color:var(--grey); margin-top:6px;">Compártelo con el grupo para que se unan. Cualquier otro Admin también puede monitorearla escribiendo este mismo código abajo.</div>
+    </div>
+    <div class="card">
+      <div style="font-weight:bold; margin-bottom:10px;">Participantes conectados: <span id="admin-participant-count">0</span></div>
+      <div id="admin-participant-list" style="font-size:14px; color:var(--grey);"></div>
+    </div>
+    <button class="primary" id="start-live-btn">Iniciar sesión ahora</button>
+    <div id="admin-live-started-note" class="hidden" style="text-align:center; font-size:13px; color:var(--correct); margin-top:10px;">Sesión iniciada. Los participantes ya pueden entrar.</div>
+  </div>
+
+  <div id="admin-live-monitor-wrap" class="hidden" style="margin-top:18px;">
+    <h2 style="font-size:17px;"><span class="live-dot"></span>Monitoreo en tiempo real · <span id="admin-monitor-code-label"></span></h2>
+    <div style="font-size:13px; color:var(--grey); margin-bottom:10px;">Cada participante avanza a su propio ritmo · Actualiza cada 3s.</div>
+    <table class="monitor-table">
+      <thead><tr><th>Nombre</th><th>Progreso</th><th>Correctas</th><th>%</th><th>Tiempo restante</th><th>Estado</th></tr></thead>
+      <tbody id="admin-monitor-body"></tbody>
+    </table>
+    <button class="primary" id="admin-download-all-pdf-btn" style="margin-top:16px;">Descargar PDF de todos los participantes</button>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <div class="pill">Monitorear otra sesión</div>
+    <div style="margin-bottom:8px; font-weight:bold;">¿Otro Admin ya creó una sesión?</div>
+    <input type="text" id="admin-watch-code-input" placeholder="Código de la sesión, ej. AB3K7">
+    <button class="secondary" id="admin-watch-code-btn" style="width:100%; margin-top:8px;">Monitorear esta sesión</button>
+  </div>
+
+  <div class="card">
+    <div class="pill">Sesiones recientes</div>
+    <div id="admin-recent-sessions-list" style="font-size:14px; color:var(--grey);"><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">UUHTP</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">W4KVM</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">P9HMN</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">H589T</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">HUY5A</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">YT4UP</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">K8WH8</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">7E5U7</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div></div>
+  </div>
+
+  <button class="secondary" id="back-from-admin-create-btn" style="width:100%; margin-top:14px;">Volver al menú</button>
+</div>
+
+<div id="screen-live-join" class="hidden">
+  <div class="card">
+    <div class="pill">Sesión en vivo</div>
+    <div style="margin-bottom:10px; font-weight:bold;">Código de la sesión</div>
+    <input type="text" id="live-code-input" placeholder="Ej. AB3K">
+    <div class="field-error" id="live-join-error">No encontramos esa sesión. Verifica el código con tu Admin.</div>
+  </div>
+  <button class="primary" id="join-live-btn">Unirme</button>
+  <button class="secondary" id="back-from-live-join-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
+</div>
+
+<!-- SCREEN LIVE WAIT: SALA DE ESPERA -->
+<div id="screen-live-wait" class="hidden">
+  <div class="score-summary">
+    <div><span class="live-dot"></span>Esperando a que el Admin inicie la sesión…</div>
+    <div style="font-size:13px; color:var(--grey); margin-top:10px;">Código: <strong id="wait-live-code"></strong></div>
+  </div>
+  <button class="secondary" id="leave-live-wait-btn" style="width:100%;">Salir de la sesión</button>
+</div>
+
+<!-- SCREEN LIVE QUIZ: PREGUNTA SINCRONIZADA -->
+<div id="screen-live-quiz" class="hidden">
+  <div class="progress-bar"><div class="progress-fill" id="live-progress-fill" style="width:0%"></div></div>
+  <div class="meta-row">
+    <span id="live-progress-label">Pregunta 1 de 20</span>
+  </div>
+  <div class="question-text" id="live-question-text"></div>
+  <div id="live-options-container"></div>
+  <div class="nav-row">
+    <button class="primary" id="live-next-btn" disabled="">Selecciona una respuesta</button>
+  </div>
+</div>
+
+<!-- SCREEN LIVE RESULTS -->
+<div id="screen-live-results" class="hidden">
+  <div class="score-summary">
+    <div style="font-size:16px; color:var(--grey);">Resultado de la sesión en vivo</div>
+    <div class="score-big" id="live-final-score">0 / 20</div>
+    <div id="live-grade-badge-container"></div>
+  </div>
+  <div id="live-answer-review"></div>
+  <button class="primary" id="live-pdf-btn" style="margin-top:14px;">Descargar mi PDF de resultados</button>
+  <button class="secondary" id="live-back-to-menu-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
+</div>
+
+<!-- SCREEN 1: SETUP (motor del Examen General) -->
+<div id="screen-setup" class="hidden">
+  <div class="card">
+    <div class="pill">Examen general</div>
+    <div style="font-weight:bold;">Listo para comenzar</div>
+    <div style="font-size:14px; color:var(--grey); margin-top:6px;">25 preguntas en el formato real del examen, uno de los 5 dominios de la certificación, mezcladas y presentadas en orden aleatorio — igual que una simulación real de examen.</div>
+  </div>
+  <button class="primary" id="start-btn">Iniciar examen general</button>
+  <button class="secondary" id="back-from-setup-btn" style="margin-top:10px; width:100%;">Volver al menú</button>
+  <button class="secondary" id="monitor-btn" style="margin-top:10px; width:100%; display:none;">Live monitor (for instructors)</button>
+</div>
+
+<!-- SCREEN 2: QUIZ -->
+<div id="screen-quiz" class="hidden">
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="meta-row">
+    <span id="progress-label">Question 1 of 37</span>
+    <span id="domain-label">D1 · Agentic Architecture</span>
+    <span id="exam-timer-label" style="font-weight:bold;">20:00</span>
+  </div>
+  <button class="link-btn" id="toggle-nav-panel-btn" style="margin-bottom:10px;">Ver preguntas respondidas ▾</button>
+  <div id="question-nav-panel" class="question-nav-panel hidden"></div>
+  <div class="scenario-box" id="scenario-text"></div>
+  <div class="question-text" id="question-text"></div>
+  <div id="options-container"></div>
+  <div id="feedback-container"></div>
+  <div class="nav-row">
+    <button class="primary" id="next-btn" disabled="">Answer to continue</button>
+  </div>
+</div>
+
+<!-- SCREEN 3: RESULTS -->
+<div id="screen-results" class="hidden">
+  <div class="score-summary">
+    <div style="font-size:16px; color:var(--grey);">Final score</div>
+    <div class="score-big" id="final-score">0 / 0</div>
+    <div id="grade-badge-container"></div>
+    <div class="cutoff-note">Real exam pass mark: 720 / 1000 (72%)</div>
+    <div id="domain-breakdown" style="margin-top:18px; text-align:left;"></div>
+  </div>
+  <button class="primary" id="pdf-btn" style="margin-bottom:10px;">Download PDF study report</button>
+  <button class="secondary" id="restart-btn" style="width:100%;">Take another simulation</button>
+  <button class="secondary" id="copy-results-btn" style="width:100%; margin-top:10px;">Copy my results to share</button>
+  <button class="secondary" id="back-to-menu-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
+</div>
+
+<!-- SCREEN 4: LIVE MONITOR -->
+<div id="screen-monitor" class="hidden">
+  <h2><span class="live-dot"></span>Live monitor</h2>
+  <div style="font-size:13px; color:var(--grey); margin-bottom:14px;">Auto-refreshes every 4 seconds while this screen is open.</div>
+  <table class="monitor-table">
+    <thead><tr><th>Name</th><th>Progress</th><th>Score</th><th>%</th><th>Status</th></tr></thead>
+    <tbody id="monitor-body"></tbody>
+  </table>
+  <div id="monitor-empty" style="color:var(--grey); font-size:14px; padding:20px 0;"></div>
+  <button class="secondary" id="back-from-monitor-btn" style="margin-top:18px; width:100%;">Back</button>
+</div>
+
+<div class="offline-banner" id="offline-banner">
+  <div class="offline-banner-card">
+    <div style="font-weight:bold; font-size:16px; margin-bottom:8px;"><span class="live-dot"></span>Sin conexión</div>
+    <div style="font-size:14px; color:var(--grey);">Tu examen está en pausa. En cuanto vuelva la conexión a internet, continuarás exactamente donde te quedaste.</div>
+  </div>
+</div>
+
+<script>
+const el = id => document.getElementById(id);
+
+// ---- Tema claro/oscuro ----
+let currentTheme = "dark";
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+  document.getElementById("theme-toggle-btn").textContent = theme === "light" ? "🌙 Oscuro" : "☀️ Claro";
+}
+document.getElementById("theme-toggle-btn").onclick = () => applyTheme(currentTheme === "light" ? "dark" : "light");
+applyTheme("dark");
+
+const DOCS = {
+  loop: "https://docs.claude.com/en/docs/agents-and-tools/tool-use/overview",
+  hooks: "https://docs.claude.com/en/docs/claude-code/hooks",
+  subagents: "https://docs.claude.com/en/docs/claude-code/sub-agents",
+  toolchoice: "https://docs.claude.com/en/docs/build-with-claude/tool-use",
+  mcp: "https://docs.claude.com/en/docs/agents-and-tools/mcp",
+  memory: "https://docs.claude.com/en/docs/claude-code/memory",
+  cli: "https://docs.claude.com/en/docs/claude-code/cli-reference",
+  skills: "https://docs.claude.com/en/docs/claude-code/skills",
+  fewshot: "https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting",
+  batch: "https://docs.claude.com/en/docs/build-with-claude/batch-processing",
+  context: "https://docs.claude.com/en/docs/build-with-claude/context-windows",
+  promptbasics: "https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview",
+};
+
+const domains = [
+  { code: "D1", name: "Agentic Architecture & Orchestration", weight: 27, questions: [
+    { scenario: "A team built an agent that processes refund requests. They notice the agent sometimes stops after just 2 tool calls when clearly more steps were needed, and other times keeps iterating unnecessarily for 15+ turns on simple requests. Their current implementation checks whether the word \"done\" appears anywhere in Claude's response text to decide whether to stop.", question: "What is the most reliable way to fix this premature/excessive termination problem?", options: ["Increase the iteration cap to 20 to give the agent more room.", "Check the stop_reason field in the API response — continue while it is \"tool_use\" and stop when it changes to \"end_turn\".", "Ask Claude in the system prompt to always say \"TASK COMPLETE\" as the very last word, and check for that exact string.", "Track how many tool calls have been made and stop automatically once 5 have been executed."], correct: 1, why: "Why: stop_reason is the only deterministic and unambiguous termination signal. A) doesn't fix the root cause — iteration caps are only a safety net. C) is still parsing natural language, which is ambiguous. D) is an arbitrary cap not tied to whether the task actually finished.", source: "Domain 1 — The Agentic Loop", doc: DOCS.loop },
+    { scenario: "A financial services company is building an agent that can execute wire transfers. Compliance requires that transfers over $10,000 can NEVER be executed without secondary human approval, under any circumstances — including if the agent is manipulated by adversarial input in the conversation.", question: "What is the correct way to enforce this requirement?", options: ["Add a strong instruction in the system prompt: \"Never execute a transfer over $10,000 without human approval.\"", "Implement a PreToolUse hook that blocks the wire_transfer tool call whenever the amount exceeds $10,000 and no approval flag is present.", "Fine-tune Claude further on examples of correctly escalating large transfers.", "Add a few-shot example in the prompt showing Claude declining a large transfer without approval."], correct: 1, why: "Why: Only hooks are deterministic / code-level and cannot be bypassed by prompt injection. A, C, and D are all probabilistic prompt-based measures — the model might not comply.", source: "Domain 1 — Guardrails Hierarchy", doc: DOCS.loop },
+    { scenario: "A research assistant needs to gather information from four completely independent sources (news API, weather API, stock API, calendar API) to compile a morning briefing. None of the sources depend on each other's output.", question: "Which orchestration pattern is most appropriate?", options: ["Sequential — call each API one after another, passing results forward.", "Parallel — fan out all four calls simultaneously since they don't share state, then fan-in the results.", "Hub-and-spoke with a coordinator that decides the order of the four independent calls at runtime.", "Prompt chaining — treat each API call as a step in a linear pipeline."], correct: 1, why: "Why: The decision rule is clear: independent subtasks → parallel orchestration. The other options impose an unnecessary sequential dependency that only adds latency.", source: "Domain 1 — Orchestration Patterns", doc: DOCS.loop },
+    { scenario: "An agent handling IT support tickets escalates a case to a human technician after failing to resolve a printer connectivity issue. The handoff it produces reads: \"Sorry, I couldn't fix this. Please help the customer.\"", question: "What is the biggest problem with this handoff?", options: ["It's too short; it should include a longer apology.", "It lacks the structured elements the exam tests: customer/ticket ID, factual summary, root cause analysis, and recommended action.", "It should have retried the tool call more times before escalating.", "It should have asked the customer for confirmation before escalating."], correct: 1, why: "Why: The structured handoff format the exam tests requires: customer ID, summary, root cause, and recommended action. A generic failure message violates the key rule: never fail silently.", source: "Domain 1 — Human-in-the-Loop", doc: DOCS.loop },
+    { scenario: "A team builds one large coordinator agent with 18 tools (email, calendar, CRM, database, file system, etc.) so it can \"handle anything.\" They notice the agent frequently selects the wrong tool even for simple tasks.", question: "Based on the exam's guidance on multi-agent design, what is the most likely fix?", options: ["Add more detailed tool descriptions to the single 18-tool agent.", "Split into a coordinator + several specialist subagents, each scoped to 4-5 tools via their AgentDefinition.", "Reduce tools to only the 5 most popular ones, removing the rest entirely.", "Increase the context window so the agent can \"remember\" all 18 tools better."], correct: 1, why: "Why: This mirrors a common exam trap: \"use one agent with many tools for simplicity\" is wrong — scope to 4-5 tools per agent using the coordinator + specialist pattern.", source: "Domain 1 — Multi-Agent Systems", doc: DOCS.loop }
+  ]},
+  { code: "D2", name: "Tool Design & MCP Integration", weight: 18, questions: [
+    { scenario: "You're building a document classifier that could be extracting data from invoices, contracts, or receipts — you don't know which type of document will come in, but whichever it is, you need the extracted data to come back in a structured format matching one of three schemas.", question: "Which tool_choice setting is correct?", options: ["tool_choice: \"auto\" — let the model freely decide.", "tool_choice: { type: \"tool\", name: \"extract_invoice\" } — force one specific tool.", "tool_choice: \"any\" — force a tool call, letting the model pick which of the three schemas applies.", "Don't use tools at all; ask for JSON in the prompt."], correct: 2, why: "Why: When the document type is unknown but any of several extraction schemas could apply, tool_choice: \"any\" guarantees structured output while letting the model pick the right tool.", source: "Domain 2 — tool_choice Modes", doc: DOCS.loop },
+    { scenario: "A search tool queries a customer database for \"blue winter jacket\" and returns zero results because the store genuinely never carried that item.", question: "How should this be handled?", options: ["Treat it as an error and retry the search with different parameters automatically.", "Accept it as a valid empty result — the tool executed successfully and the absence of data IS the answer.", "Escalate to a human because the search failed.", "Return a generic error message: \"Something went wrong.\""], correct: 1, why: "Why: The exam tests this distinction repeatedly: if the tool executed successfully and returned nothing, that's a valid result, not an error. \"Not found\" is deliberately absent from the error categories.", source: "Domain 2 — Tool Error Handling", doc: DOCS.loop },
+    { scenario: "Claude keeps picking the wrong tool between update_customer and update_order — the two have similar names and vague one-line descriptions.", question: "What should you try first?", options: ["Remove one of the two tools to eliminate the ambiguity.", "Improve both tool descriptions with clearer detail: what each does, expected inputs, what it returns, and boundary conditions.", "Rename the tools to be even more similar so Claude treats them as one category.", "Reduce the total number of tools available to Claude to 2."], correct: 1, why: "Why: The exam's optimisation sequence is: enhance descriptions first → add few-shot examples → consolidate tools. Don't start by reducing the number of tools.", source: "Domain 2 — Tool Description Design", doc: DOCS.loop },
+    { scenario: "A dev team wants to share an MCP server configuration with the whole team via version control, so everyone on the project automatically gets the same connectors.", question: "Where should this configuration go?", options: ["~/.claude.json", "​.mcp.json in the project root", "A personal Claude Desktop settings file", "An environment variable set locally by each developer"], correct: 1, why: "Why: .mcp.json in the project root is the project-level configuration, shared with the team via Git. ~/.claude.json is personal/global and not committed.", source: "Domain 2 — MCP Architecture", doc: DOCS.loop },
+    { scenario: "An agent calling a book_flight tool sometimes fabricates a flight_id value instead of first calling search_flights to get a real one, causing booking failures downstream.", question: "Which fix addresses the root cause?", options: ["Add server-side validation that rejects invalid flight_ids after the fact.", "Update the book_flight tool description to explicitly state that flight_id must come from a prior search_flights call and must never be invented.", "Log every fabricated flight_id for later analysis.", "Force tool_choice to \"any\" so Claude must always call a tool."], correct: 1, why: "Why: The tool description is the primary signal Claude uses to decide how and when to use it. Server-side validation (A) only catches the symptom after the fact — it doesn't prevent the fabrication.", source: "Domain 2 — Tool Description Design", doc: DOCS.loop }
+  ]},
+  { code: "D3", name: "Claude Code Configuration & Workflows", weight: 20, questions: [
+    { scenario: "A developer has a rule in ~/.claude/CLAUDE.md saying \"always use tabs for indentation\" and a contradicting rule in the project's .claude/CLAUDE.md saying \"always use 2-space indentation.\" They assume the project-level rule will automatically win.", question: "What actually happens?", options: ["The project-level file overrides the user-level file, so 2-space indentation always wins.", "Both files are concatenated into context; neither overrides the other, and Claude may pick either rule arbitrarily — the contradiction should be fixed at the source.", "Claude ignores both and uses its default styling.", "The user-level file always wins because it loads first."], correct: 1, why: "Why: This is a load order, not a precedence chain — no file replaces another. Distractors claiming \"more specific scope wins\" or \"user-level overrides project-level\" are wrong.", source: "Domain 3 — Configuration Hierarchy", doc: DOCS.loop },
+    { scenario: "A team wants a rule that only applies when Claude is editing files inside src/payments/**, requiring extra validation logic, without adding noise to every other part of the codebase.", question: "What's the right mechanism?", options: ["Add the rule to the root CLAUDE.md so it's always loaded.", "Create a file in .claude/rules/ with paths: [\"src/payments/**\"] in its YAML frontmatter.", "Create a Skill that must be manually invoked with /payments-rule.", "Add it as a comment inside each file in that folder."], correct: 1, why: "Why: Files in .claude/rules/ use YAML frontmatter with a paths field for conditional loading — they only load when Claude Code operates on files matching the glob pattern.", source: "Domain 3 — .claude/rules/", doc: DOCS.loop },
+    { scenario: "A team wants to make absolutely sure Claude Code never runs rm -rf on any path under /production/, even if a user's prompt tries to talk it into doing so.", question: "What guarantees this?", options: ["A strongly worded instruction in CLAUDE.md.", "A PreToolUse hook that blocks any Bash command matching rm -rf /production/* before it executes.", "A system prompt reminder appended via --append-system-prompt.", "Asking Claude to double-check before running destructive commands."], correct: 1, why: "Why: Hooks are deterministic — they run as code, not as a model instruction, and cannot be bypassed by prompt injection or model reasoning.", source: "Domain 3 — Hooks", doc: DOCS.loop },
+    { scenario: "A team wants to run Claude Code inside a GitHub Actions pipeline with no human present to answer prompts, and needs the output as parseable JSON.", question: "Which combination of flags is correct?", options: ["--permission-mode plan with default text output.", "-p with --output-format json.", "--resume with --model set explicitly.", "--bare alone, with no other flags."], correct: 1, why: "Why: -p enables non-interactive mode, essential for CI/CD, and --output-format json produces machine-parseable output.", source: "Domain 3 — CLI Flags", doc: DOCS.loop },
+    { scenario: "A team wants a reusable workflow that runs the test suite, is only available to the project team, includes supporting files, and should run in an isolated context so it doesn't pollute the main conversation.", question: "What's the right feature?", options: ["A personal command in ~/.claude/commands/.", "A Skill in .claude/skills/ with context: fork in its frontmatter.", "A single flat .md file with $ARGUMENTS in .claude/commands/.", "A CLAUDE.md instruction describing how to run tests."], correct: 1, why: "Why: Skills are directories with a SKILL.md entrypoint, support supporting files and frontmatter configuration, and context: fork ensures execution doesn't pollute the main conversation.", source: "Domain 3 — Skills System", doc: DOCS.loop }
+  ]},
+  { code: "D4", name: "Prompt Engineering & Structured Output", weight: 20, questions: [
+    { scenario: "A legal tech startup needs Claude to always return contract clause extractions in one exact JSON shape for their downstream database — no exceptions, no malformed JSON ever.", question: "What's the exam's preferred pattern?", options: ["Prompt-based JSON: \"Please output only valid JSON matching this schema.\"", "Define a tool whose only purpose is to structure the output, and force it with tool_choice: { type: \"tool\", name: \"extract_clauses\" }.", "Pre-fill Claude's response with an opening brace and hope it completes valid JSON.", "Use tool_choice: \"auto\" and validate the output after the fact."], correct: 1, why: "Why: Forcing a specific tool_choice guarantees the call happens and the tool's JSON schema constrains the shape of the response — validated by the API, not by post-processing.", source: "Domain 4 — Structured Output", doc: DOCS.loop },
+    { scenario: "An extraction schema requires a refund_amount field for every support ticket, but many tickets don't actually involve a refund at all. The team notices Claude keeps inventing plausible-looking dollar amounts.", question: "What's the fix?", options: ["Make refund_amount optional/nullable so Claude can return null when there is no refund.", "Keep the field required but add a note in the description saying \"only fill if applicable.\"", "Remove the field from the schema entirely.", "Add more few-shot examples showing refund amounts."], correct: 0, why: "Why: If a field might not have a real value, making it nullable/not-required gives the model permission to return null instead of inventing data to satisfy the schema.", source: "Domain 4 — Schema Design for Structured Output", doc: DOCS.loop },
+    { scenario: "A team's output format is inconsistent about 30% of the time. They decide to add 15 few-shot examples to fix it.", question: "What does the exam say about this approach?", options: ["Correct — more examples always improve consistency.", "Overkill — 2-4 examples is the sweet spot; going from 4 to 8+ rarely helps and adds unnecessary context cost.", "Wrong — few-shot examples should never be used for structured output.", "Correct, as long as examples are placed in the user message, not the system prompt."], correct: 1, why: "Why: 2-4 examples is the sweet spot. Going from 0 to 2 examples has the largest impact; going from 4 to 8 rarely improves quality and costs more context.", source: "Domain 4 — Few-Shot Examples", doc: DOCS.loop },
+    { scenario: "Claude extracts a date as \"next Tuesday\" instead of an ISO 8601 format. The team's retry logic just resends the same prompt with \"Please try again.\"", question: "What's wrong, and what should be done instead?", options: ["Nothing is wrong; retries should always be identical.", "The retry should include the original prompt + the failed output + the specific validation error (e.g., \"dates[1] is relative, not absolute — must be ISO 8601\").", "Switch immediately to escalation instead of retrying.", "Add the word \"please\" to make the retry more polite."], correct: 1, why: "Why: The model needs to see what it produced, what was wrong, and can then correct specifically. Never just say \"try again\" without the specific error.", source: "Domain 4 — Retry Pattern", doc: DOCS.loop },
+    { scenario: "A team wants to reduce API costs by 50% for a customer-facing live chat feature, so they decide to route all live chat messages through the Batch API.", question: "What's wrong with this plan?", options: ["Nothing — Batch API is always cheaper and equally fast.", "Batch API is for latency-tolerant bulk workloads (up to 24h), not real-time/user-facing interactions like live chat.", "Batch API doesn't support structured output.", "Batch API requires synchronous calls only."], correct: 1, why: "Why: Batch API trades latency for cost savings, not speed. If the question mentions \"real-time\" or \"user-facing\", Batch API is the wrong answer.", source: "Domain 4 — Batch API", doc: DOCS.loop }
+  ]},
+  { code: "D5", name: "Context Management & Reliability", weight: 15, questions: [
+    { scenario: "As a customer service conversation grows long, the team's system periodically asks Claude to \"summarise everything discussed so far\" to save context space. They notice specific order numbers and dates keep getting lost or altered.", question: "What's the correct fix?", options: ["Summarise even more aggressively to save more space.", "Maintain a persistent structured facts block (exact IDs, dates, names) carried forward verbatim instead of relying on model summarisation.", "Increase the summarisation frequency.", "Ask Claude to summarise more carefully next time."], correct: 1, why: "Why: Each summarisation pass loses specific details. The fix is to extract concrete facts into a persistent structured block that is carried forward verbatim, not a model-generated summary.", source: "Domain 5 — Progressive Summarisation Trap", doc: DOCS.loop },
+    { scenario: "A multi-step research agent runs for over an hour and needs its intermediate findings to survive if the process crashes and needs to restart.", question: "What's the right mechanism?", options: ["Rely on conversation history — it persists automatically.", "Use scratchpad files — external persistence on disk that survives a context reset.", "Increase the context window size.", "Ask Claude to remember the findings for later."], correct: 1, why: "Why: Scratchpads are external persistence (files). Conversation history is internal persistence (context window) — when it fills up, history is lost, but scratchpad files are not.", source: "Domain 5 — Scratchpad Files", doc: DOCS.loop },
+    { scenario: "An extraction system reports 95% overall accuracy, but customers keep complaining about errors in one specific document type.", question: "What should the team do?", options: ["Trust the 95% number — the system is clearly reliable.", "Break down accuracy by category/type (stratified validation) to find the underperforming segment.", "Increase the overall sample size for the next validation round.", "Assume the customers are wrong since the aggregate metric looks fine."], correct: 1, why: "Why: Aggregate metrics mask per-type issues. An overall 95% accuracy can hide the fact that one category has much lower accuracy — you have to break it down by category.", source: "Domain 5 — Confidence Calibration & Stratified Validation", doc: DOCS.loop },
+    { scenario: "A support agent tries to decide when to escalate to a human. The team configures it to escalate whenever sentiment analysis detects a \"frustrated\" tone, or whenever Claude's self-reported confidence drops below 70%.", question: "What does the exam say about this?", options: ["Both are excellent, reliable escalation triggers.", "Both are unreliable — sentiment and self-reported confidence don't track actual case complexity; escalate on explicit human request, policy gaps, or genuine inability to progress.", "Only sentiment should be used.", "Only self-reported confidence should be used."], correct: 1, why: "Why: Sentiment-based escalation and self-reported confidence scores are common exam distractors — neither tracks actual case complexity. Valid triggers: explicit request, policy gap, or inability to make progress.", source: "Domain 5 — Escalation & Ambiguity", doc: DOCS.loop },
+    { scenario: "In a long debugging session, Claude starts repeating earlier suggestions and contradicting things it said 20 turns ago.", question: "What's the best fix?", options: ["Add more context by pasting in even more logs.", "Start a fresh session and inject a curated summary of key facts, rather than continuing to pile on more raw context.", "Ask Claude to \"please stop repeating yourself.\"", "Increase temperature to encourage more varied responses."], correct: 1, why: "Why: Repeating itself and contradicting earlier statements are context window pressure signals. The fix is a fresh start with a curated summary injection, not more raw context.", source: "Domain 5 — Context Window Strategies", doc: DOCS.loop }
+  ]}
+];
+
+const LIVE_QUESTIONS = [
+  { qNum: 1, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A 12-person team runs the same release-verification checklist before every deploy. Originally documented in a wiki, each engineer copy-pasted it into their own ~/.claude/CLAUDE.md six months ago \"to keep it handy.\" Over time, three engineers added extra steps to their personal copies while two others deleted steps they found redundant, and nobody currently owns a single canonical version. A new hire asks where the actual current process lives. What is the most effective fix?", options: ["Consolidate the steps into the project's shared CLAUDE.md, committed to the repository, and have everyone delete their personal copies.", "Ask the team to synchronize their personal CLAUDE.md files by comparing them in a meeting.", "Add a note at the top of each personal CLAUDE.md saying \"see the wiki for the real version.\"", "Convert the checklist into a Skill invoked with /verify-release so no one needs to remember it."], correct: 0, why: "Why: A procedure that every project member must follow identically belongs in project-scope, version-controlled CLAUDE.md — the team standard that's always loaded, for everyone who clones the repo. A Skill (D) is model-invoked and doesn't resolve why five personal copies diverged in the first place; a release checklist that must run before every deploy is closer to \"always applies\" content. B and C don't fix anything structurally, they just manage the symptom." },
+  { qNum: 2, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A data engineering team has an eight-step data pipeline (extract, validate schema, dedupe, transform, load staging, run quality checks, promote to production, notify) that a human explicitly triggers about twice a week, always in that exact fixed order, whenever a new vendor file arrives. Currently, whoever remembers is the one who pastes the eight steps at the top of a fresh conversation, and two engineers have slightly different pasted versions that have drifted from each other. What is the most appropriate fix?", options: ["A Skill in .claude/skills/, because it packages a capability the model can decide to invoke.", "A custom slash command in .claude/commands/, because a human explicitly decides when this exact procedure should run.", "A CLAUDE.md section, because it should be loaded automatically every session.", "A rule in .claude/rules/ scoped to the vendor-file folder with a glob pattern."], correct: 1, why: "Why: The defining signal is \"a human decides when it applies\" — that is the slash command definition. A Skill is model-invoked, risking it firing unprompted. A CLAUDE.md section would load this eight-step content into every unrelated session, wasting context on procedures nobody needs that day. A path-scoped rule applies to file-type conventions triggered by touching matching paths, not to a human-triggered multi-step action." },
+  { qNum: 3, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A monorepo has test files scattered throughout the codebase, living next to the code they test rather than in a single tests/ directory — a convention the team likes because it keeps tests close to implementation. They want Claude to always follow the same arrange-act-assert pattern and one-assert-per-test rule whenever it touches any file ending in .test.tsx or .spec.ts, no matter which folder that file is in, without loading that guidance when Claude is working on unrelated files. What's the correct mechanism?", options: ["A CLAUDE.md file placed in each subdirectory that contains test files.", "A file in .claude/rules/ with a paths field matching **/*.test.tsx and **/*.spec.ts in its YAML frontmatter.", "A Skill invoked manually with /test-conventions before writing any test.", "A single root-level CLAUDE.md section titled \"Testing,\" relying on Claude to recognize when it's relevant."], correct: 1, why: "Why: Because the convention follows a file TYPE, not a folder, only a path-scoped rule with a glob pattern captures every matching file across the whole repo without a human remembering to invoke anything or every session paying the context cost. A CLAUDE.md per subdirectory works when conventions follow folders — not when they're type-based and scattered." },
+  { qNum: 4, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A \"dependency auditor\" Skill is defined with just: name, description \"Revisa las dependencias del proyecto,\" and allowed-tools: Read, Grep — no other frontmatter fields. When invoked on a large monorepo, it produces several thousand lines of intermediate reasoning and tool output that all lands in the main conversation, making the developer scroll for a long time to find the final answer, even though the finding itself is only a few lines. What is missing from this Skill's frontmatter that would fix the problem, and what can this Skill NOT do regardless of the fix?", options: ["Add context: fork, so its execution runs isolated and only the final result returns to the main conversation; it cannot modify any file, because Write and Edit are absent from allowed-tools.", "Add argument-hint, so the developer is prompted for which dependency to check; it cannot modify any file, because Bash is absent from allowed-tools.", "Add allowed-tools: Write, so it can save its findings to a report file; it can modify files once Write is added.", "Remove allowed-tools entirely so the Skill has unrestricted access; it already can modify files via Read."], correct: 0, why: "Why: context: fork is exactly the mechanism that isolates verbose output from the main conversation. Since allowed-tools only lists Read and Grep, the Skill is read-only by construction — it cannot write or edit anything regardless of any other change, because allowed-tools is a restriction, not something worked around by adding an unrelated field." },
+  { qNum: 5, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A platform team maintains a GitHub MCP server that the entire engineering org should get automatically the moment they clone any of the company's repositories, without each engineer having to configure anything by hand or paste in credentials. The server needs a personal access token to authenticate, and legal has explicitly forbidden committing any credential, even a placeholder-looking one, to any repository. What satisfies both requirements at once?", options: ["Commit .mcp.json to the project root with the token hardcoded, since the repository is private.", "Commit .mcp.json to the project root with the token referenced as ${GITHUB_TOKEN}, an environment variable each engineer sets locally.", "Have each engineer configure the server individually in their personal ~/.claude.json.", "Store the token in a company wiki page linked from the README."], correct: 1, why: "Why: Project-scoped .mcp.json is what makes the server configuration automatic for anyone who clones the repo. The ${VARIABLE} syntax lets that same file be committed without the actual secret ever touching version control — the token lives only in each person's local environment. Option C fails the \"automatically, without configuring\" requirement; A violates the no-commit rule outright, private repo or not." },
+  { qNum: 6, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A team has two separate requirements: (1) a file named schema.lock must never, under any circumstance, be modified by an agent — not even partially, not even if a migration seems to require it; and (2) any time vendor data finishes an ingestion step, a normalisation script must automatically run afterward to standardise field names before anything else touches that data. Which pair of mechanisms correctly satisfies both, and why can't hooks alone cover requirement (1)?", options: ["A deny rule for schema.lock, and a PostToolUse hook after the ingestion tool; a hook could still technically run right up to a forbidden edit rather than preventing the tool call outright, whereas a permission-layer deny rule blocks the action from ever being dispatched.", "A PreToolUse hook for schema.lock, and a CLAUDE.md instruction for the normalisation step; hooks and deny rules are interchangeable so either would work for requirement (1).", "A single Skill that handles both requirements, since Skills can restrict tool access via allowed-tools.", "A deny rule for both requirements, since deny rules are the strictest mechanism available."], correct: 0, why: "Why: This is the \"permissions prevent; hooks execute\" distinction — they are not interchangeable. Deny rules exist for \"must never happen\" cases; hooks exist for \"must always run automatically\" cases. Using a deny rule for requirement (2) would be the wrong tool: nothing is being prevented, something needs to run." },
+  { qNum: 7, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An engineer has three separate named Claude Code sessions open this week: one investigating a memory leak, one drafting release notes, and one exploring a proposed caching layer. They step away from their desk, and a teammate briefly uses their terminal to ask an unrelated one-off question, creating a fourth, very short-lived session. The next morning, the engineer wants to pick back up exactly where they left off on the memory-leak investigation — not whatever was used most recently. What should they run?", options: ["claude --continue, since it's the simplest way to resume work.", "claude --resume <name>, specifying the memory-leak session by name.", "A fresh session, pasting in a summary of the memory-leak findings from memory.", "claude --continue twice in a row, since the second most recent session should be the memory-leak one."], correct: 1, why: "Why: --continue always picks up the most recent session, whatever it was — in this case, the teammate's unrelated one-off question. Only --resume <name> lets you target a specific named session regardless of what ran most recently." },
+  { qNum: 8, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An engineer has spent forty minutes with Claude analysing a legacy authentication module, and Claude has built up a detailed understanding of how sessions, tokens, and refresh logic interact. The engineer now wants to explore two different refactoring strategies in depth — extracting the auth logic into a standalone microservice, versus refactoring it in place — before deciding which to actually implement. Both explorations need the accumulated understanding from the last forty minutes, but the two paths shouldn't influence or contaminate each other's reasoning. What's the most effective way to structure this?", options: ["Launch two subagents from the current session, one per strategy, each starting with a summary of the auth analysis.", "Use fork_session to create two independent branches from the current point, exploring one strategy in each.", "Continue in the single current session, exploring both strategies one after another in the same thread.", "Start two entirely fresh sessions, manually re-explaining the auth module's behaviour in each."], correct: 1, why: "Why: This is precisely what fork_session is for: two paths that need to diverge from a shared analysis without contaminating each other. Continuing in one thread would let the two strategies bias each other. Subagents sound sophisticated but start with blank context — the forty minutes of analysis would have to be resummarised, and exactly the reasoning that identified these two strategies is what tends to get lost in a summary." },
+  { qNum: 9, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An exploration subagent spent thirty minutes analysing a legacy payment system, reading forty-seven files and documenting the data flows between them, when the engineer's connection dropped and the session was interrupted mid-investigation. While the engineer was reconnecting, a teammate merged a pull request that renamed two of the utility functions the subagent had already documented by their old names. What's the most effective way to continue the same exploration?", options: ["Resume the subagent from its previous transcript without mentioning the renames — the architecture understanding remains valid.", "Launch a completely fresh subagent, discarding the forty-seven files' worth of analysis, since the codebase has changed.", "Resume the subagent from its previous transcript and inform it specifically which two functions were renamed.", "Launch a fresh subagent and paste in the previous transcript as its starting prompt, without highlighting what changed."], correct: 2, why: "Why: Resuming preserves the accumulated understanding of data flows across forty-seven files, which is still valid — only two specific names changed. A targeted correction lets the agent re-anchor without redoing the investigation. Discarding everything is expensive and unnecessary; resuming without flagging the rename risks the agent referencing stale names in its next answer." },
+  { qNum: 10, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A code review agent runs unattended overnight, working through a backlog of forty pull requests, taking detailed notes on each one so that if the process crashes partway through, it can pick back up without re-reviewing PRs it already finished. The process does, in fact, crash after PR 23 due to an unrelated infrastructure restart, and needs to resume review at PR 24 without losing prior findings. Where should the agent's running list of \"already reviewed\" PRs and their findings live, and why did conversation history alone fail here?", options: ["In the conversation history — it persists automatically across restarts, so nothing else was needed.", "In a scratchpad file on disk — conversation history is internal to a session, and a process restart doesn't survive that; a file does.", "In the system prompt, appended after each PR is reviewed.", "In the tool results returned by the code review tool itself."], correct: 1, why: "Why: Conversation history lives inside a session's context and does not survive a process crash or restart. A scratchpad file, being external persistence on disk, is exactly what contrasts against that kind of loss." },
+  { qNum: 11, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An agent has spent several hours exploring a sprawling codebase, and the conversation has accumulated so much verbose tool output — full file contents, long grep results, repeated directory listings — that new questions are starting to receive noticeably worse answers, even though the underlying investigation isn't actually finished yet. What is the most appropriate next step?", options: ["Start an entirely new session and re-explain the goal from scratch.", "Run /compact to reduce the accumulated context while staying in the same investigation.", "Increase max_tokens so more context fits.", "Ask Claude to \"please be more concise from now on.\""], correct: 1, why: "Why: /compact exists exactly for this situation: exploration filled the context window with verbose output, but the investigation itself is still ongoing and its reasoning is still needed — different from a case where the context is genuinely stale and a fresh start is preferred." },
+  { qNum: 12, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A function used across a codebase is being renamed, and static analysis has already confirmed there are exactly twenty-three call sites, all trivial one-line updates with no logic changes and each fully reversible via version control if something goes wrong. Separately, a different function backing a slow reporting query needs to be sped up, and the team is still deciding between adding indexes, introducing a materialised view, partitioning the table, or rewriting the query — each option has different infrastructure implications and would require different follow-up work depending on which one is chosen. Which of the two tasks calls for plan mode?", options: ["Both — any change touching production code deserves a plan first.", "Neither — both are well-understood engineering tasks that Claude can simply execute.", "Only the reporting-query task, because it involves multiple valid paths with genuinely different consequences.", "Only the rename task, because twenty-three call sites is a large enough volume to warrant a review step."], correct: 2, why: "Why: Volume alone (twenty-three call sites) is not complexity when every change is identical and reversible. The reporting-query task, by contrast, has more than one valid path with materially different consequences — that's what actually calls for planning first." },
+  { qNum: 13, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A developer who joined the team last month is asked to add a caching layer to a service that three other teams depend on in production. They are confident they understand the requirement, but are unsure exactly where cache invalidation logic should live, and a mistake here could cause the three dependent teams to see stale data with no obvious error message. What is the correct approach, and why isn't \"just execute it, then have someone review the diff afterward\" equivalent?", options: ["Direct execution, then have a senior engineer review the resulting diff before merging.", "Plan mode: lay out the invalidation approach and its consequences for review before any change is made.", "Direct execution on a feature branch, since branches make anything reversible.", "Direct execution, since the developer is confident about the requirement itself."], correct: 1, why: "Why: A reviewer who can only evaluate a diff after the fact isn't reviewing the decision — they're reviewing an outcome that's already been implemented. The uncertainty here is specifically about where invalidation logic should live, an architectural decision with silent, hard-to-detect consequences across three teams — exactly what plan mode surfaces before code is written. A branch makes the code reversible, not the decision three teams will build on top of." },
+  { qNum: 14, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "Claude has identified fifteen files that mention \"rate limiting\" while investigating a bug, ranging from a forty-line middleware definition to a two-thousand-line integration test file, and none of them will fit into context alongside the ongoing analysis if read in full. What is the most effective way to build understanding here?", options: ["Read all fifteen files in full before drawing any conclusions, to be thorough.", "Understanding is built incrementally: read the smaller middleware definition first, since it often reveals that several of the remaining candidate files are actually irrelevant.", "Read the files in alphabetical order, stopping once context is nearly full.", "Use Glob to re-list the same fifteen files sorted by size, then read the five largest first."], correct: 1, why: "Why: Reading everything upfront sounds rigorous and doesn't fit in context. Building understanding incrementally, starting from the smallest and most central file, is context-efficient and often reveals that several candidates are irrelevant without ever reading them." },
+  { qNum: 15, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A team connects an MCP server exposing specialized code-refactoring tools — extract_function, rename_variable, inline_function — each with a short one-line description. After integrating the server and confirming it's healthy and its tools appear correctly, the team observes that Claude continues to perform refactors using the Write tool combined with Bash sed commands instead of calling the new specialized tools, even on tasks the new tools were built to handle. What is the most effective way to improve adoption of the MCP tools, and why isn't \"the server is unhealthy\" the explanation?", options: ["Remove the Write tool from the agent's configuration entirely, forcing use of the MCP tools by elimination.", "Enhance the MCP tool descriptions to clarify what each does, when each is preferable to text manipulation, and what inputs/outputs to expect — the server being healthy only means the tools are reachable, not that Claude knows when to prefer them.", "Accept the current behaviour, since sed-based text manipulation is more predictable than specialized tools.", "Implement a request classifier that detects refactoring intent and routes it to the MCP server automatically, bypassing the agent's own tool selection."], correct: 1, why: "Why: A healthy, reachable server with thin one-line descriptions gives Claude no signal about when its tools are the better choice over general-purpose ones. Description quality, not server health, drives tool selection. Removing Write is a blunt workaround that also removes a tool Claude legitimately needs elsewhere; a whole new routing layer is disproportionate to a one-line-description problem." },
+  { qNum: 16, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A rules file at .claude/rules/infra.md has, in its frontmatter, description: \"Convenciones de infraestructura\" and paths: [\"terraform/**/*\"]. A developer is editing a file at src/api/handlers/terraform-client.ts, which imports Terraform-related types but is not itself inside a terraform/ directory. Does this rule load while editing that file, and why?", options: ["Yes, because the filename contains \"terraform\".", "No, because the glob pattern only matches paths actually under a folder literally named terraform/, regardless of filename content elsewhere.", "Yes, because rules always load for any file that imports related types.", "No, because rules never apply outside the root directory."], correct: 1, why: "Why: Glob patterns match on the actual path structure, not on substrings inside a filename or its imports. terraform/**/* requires the path to be under a folder named terraform — src/api/handlers/terraform-client.ts is not, no matter what it imports or is named." },
+  { qNum: 17, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A team's CLAUDE.md has grown into one large monolithic file mixing three unrelated topics — coding style, deployment checklist, and architecture rationale — making it hard for engineers to find or edit the specific section they need, even though all three legitimately need to load in every session. What keeps CLAUDE.md maintainable without changing what loads each session?", options: ["Split each topic into its own file and reference them from the main CLAUDE.md using @import, keeping the structure modular instead of monolithic.", "Convert two of the three topics into Skills so they load on demand instead.", "Move two of the three topics into .claude/rules/ with a glob pattern matching all files.", "Delete the least-used of the three topics."], correct: 0, why: "Why: @import keeps a CLAUDE.md that must always load in full organized across multiple files, without changing when or whether the content loads. Converting to Skills or rules would change what loads each session — which the scenario says isn't the goal, since all three areas are needed every session; this is a maintainability problem, not a context-cost problem." },
+  { qNum: 18, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "A developer needs to find every file in a large repository whose name follows the pattern *.migration.sql, regardless of what's written inside those files, and separately needs to find every place in the codebase where a specific deprecated function name still appears as text, regardless of which files those occurrences live in. Which tool handles each task?", options: ["Grep for both, since Grep can also match file names.", "Glob for the filename pattern; Grep for the text occurrences.", "Glob for both, since Glob can search inside file contents too.", "Grep for the filename pattern; Glob for the text occurrences."], correct: 1, why: "Why: Glob matches files by their path/name pattern without looking at contents; Grep searches contents regardless of filename. The two tasks described are the textbook definition of each tool, and swapping them is the exact confusion to avoid." },
+  { qNum: 19, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "Claude needs to update a configuration value that appears identically, byte-for-byte, in six different places within the same file, with no surrounding text that distinguishes one occurrence from another. What should Claude do, and why can't Edit handle this directly?", options: ["Use Edit six times, once per occurrence, since Edit is designed for exactly this.", "Read the full file, then use Write to replace its entire contents with the corrected version, since Edit requires a unique anchor and none exists here.", "Use Bash with a sed command, since this is a bulk text-replacement task.", "Use Glob to locate the six occurrences, then Edit each one individually by its line number."], correct: 1, why: "Why: Edit needs a unique surrounding anchor to know exactly which occurrence to change — when text is identical in multiple places with nothing distinguishing them, Edit cannot safely target just one. The documented fallback is Read the whole file, then Write it back in full with all corrected occurrences. Reaching for Bash to do this is the same antipattern the exam punishes elsewhere." },
+  { qNum: 20, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An MCP server exposes forty database tables through generic query tools, but has no way for Claude to know what tables or columns exist without first calling exploratory tools to discover the schema — which happens before nearly every single query, adding latency and repeating the same discovery work session after session. What change removes this repeated overhead most directly?", options: ["Expose the table catalogue and column schemas as MCP resources, giving Claude upfront visibility without needing to call anything to discover them.", "Instruct Claude in the system prompt to always call the discovery tool first and cache the result mentally for the rest of the session.", "Reduce the server to only the five most commonly queried tables, so there's less to discover.", "Enlarge the context window so previous discovery results are retained longer across turns."], correct: 0, why: "Why: MCP resources exist specifically to expose a catalogue up front, avoiding repeated exploratory calls. A prompt instruction still pays the discovery cost every session since it isn't a persistence mechanism; reducing table coverage loses functionality; enlarging the context window doesn't remove the discovery cost, it just makes stale results linger longer." }
+];
+
+const DOMAIN_COLORS = { D1: "var(--d1)", D2: "var(--d2)", D3: "var(--d3)", D4: "var(--d4)", D5: "var(--d5)" };
+
+
+// ================= Respaldo de almacenamiento con Firebase/Firestore =================
+// window.storage ya no lo provee Claude — lo implementamos nosotros mismos sobre Firestore
+// para que el resto de la app (Historial, Live, Monitor) siga funcionando sin cambios.
+let STORAGE_AVAILABLE = false;
+let fbApp = null;
+let fbDb = null;
+const KV_COLLECTION = "cca_f_kv";
+
+function kvFullKey(key, shared) {
+  return (shared ? "shared__" : ("personal__" + (currentUser.email || currentUser.name || "anon") + "__")) + key;
+}
+function kvDocId(fullKey) {
+  // Firestore doc IDs no pueden contener "/". Sustituimos por un separador seguro.
+  return fullKey.replace(/\//g, "__SLASH__");
+}
+
+function installStorageShim() {
+  window.storage = {
+    async get(key, shared = false) {
+      const fullKey = kvFullKey(key, shared);
+      const snap = await fbDb.collection(KV_COLLECTION).doc(kvDocId(fullKey)).get();
+      if (!snap.exists) throw new Error("Key not found: " + key);
+      const data = snap.data();
+      return { key, value: data.value, shared };
+    },
+    async set(key, value, shared = false) {
+      const fullKey = kvFullKey(key, shared);
+      await fbDb.collection(KV_COLLECTION).doc(kvDocId(fullKey)).set({ fullKey, value, updatedAt: Date.now() });
+      return { key, value, shared };
+    },
+    async delete(key, shared = false) {
+      const fullKey = kvFullKey(key, shared);
+      await fbDb.collection(KV_COLLECTION).doc(kvDocId(fullKey)).delete();
+      return { key, deleted: true, shared };
+    },
+    async list(prefix = "", shared = false) {
+      const fullPrefix = kvFullKey(prefix, shared);
+      const snap = await fbDb.collection(KV_COLLECTION)
+        .where("fullKey", ">=", fullPrefix)
+        .where("fullKey", "<", fullPrefix + "\uf8ff")
+        .get();
+      const keys = [];
+      snap.forEach(doc => {
+        const fk = doc.data().fullKey;
+        const stripped = shared ? fk.replace("shared__", "") : fk.replace("personal__" + (currentUser.email || currentUser.name || "anon") + "__", "");
+        keys.push(stripped);
+      });
+      return { keys, prefix, shared };
+    }
+  };
+}
+
+// Config real del proyecto de Firebase de INMEGA — pública por diseño (la seguridad
+// vive en las Reglas de Firestore, no en ocultar estos valores). Así todos los que
+// abren el link entran directo, sin tener que pegar nada.
+const HARDCODED_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD5_TMjD_-nIG-3hErKSLW4eRQhdxEUxWw",
+  authDomain: "inmega-curso-cca-f.firebaseapp.com",
+  projectId: "inmega-curso-cca-f",
+  storageBucket: "inmega-curso-cca-f.firebasestorage.app",
+  messagingSenderId: "1079357417571",
+  appId: "1:1079357417571:web:4926a47ed4f70adc613056"
+};
+
+function tryLoadSavedFirebaseConfig() {
+  if (HARDCODED_FIREBASE_CONFIG && HARDCODED_FIREBASE_CONFIG.projectId) {
+    try { initFirebase(HARDCODED_FIREBASE_CONFIG); return true; } catch (e) {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem("cca_f_firebase_config"); } catch (e) {}
+  if (!saved) return false;
+  try {
+    const config = JSON.parse(saved);
+    initFirebase(config);
+    return true;
+  } catch (e) { return false; }
+}
+
+function initFirebase(config) {
+  fbApp = firebase.initializeApp(config);
+  fbDb = firebase.firestore();
+  installStorageShim();
+  STORAGE_AVAILABLE = true;
+}
+
+el("save-firebase-config-btn").onclick = () => {
+  const raw = el("firebase-config-input").value.trim();
+  el("firebase-config-error").style.display = "none";
+  el("firebase-config-status").textContent = "";
+  let config;
+  try {
+    config = JSON.parse(raw);
+  } catch (e) {
+    try {
+      // Tolera que peguen literal de JS (con comillas simples o sin comillas en las llaves)
+      config = Function('"use strict"; return (' + raw + ')')();
+    } catch (e2) {
+      el("firebase-config-error").style.display = "block";
+      return;
+    }
+  }
+  if (!config || !config.projectId || !config.apiKey) {
+    el("firebase-config-error").style.display = "block";
+    return;
+  }
+  try {
+    initFirebase(config);
+    try { localStorage.setItem("cca_f_firebase_config", JSON.stringify(config)); } catch (e) {}
+    showScreen("screen-register");
+  } catch (e) {
+    el("firebase-config-status").textContent = "Error al conectar: " + e.message;
+  }
+};
+
+const configAlreadySaved = tryLoadSavedFirebaseConfig();
+
+let quizQuestions = [];
+let currentIndex = 0;
+let answered = false;
+let pendingIdx = null;
+let quizUserAnswers = [];
+let userScore = 0;
+let userName = "";
+let sessionKey = "";
+let perDomainScore = {};
+let quizMode = "general";
+let quizModuleCode = null;
+let quizModuleName = null;
+let examTimerInterval = null;
+let examTimeRemaining = 0;
+const PASS_PCT = 72;
+
+function stopExamTimer() {
+  if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
+}
+function updateExamTimerLabel() {
+  const label = el("exam-timer-label");
+  if (!label) return;
+  const t = Math.max(0, examTimeRemaining);
+  const m = Math.floor(t / 60), s = t % 60;
+  label.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  label.style.color = t <= 60 ? "var(--wrong)" : "";
+}
+function beginExamCountdownInterval() {
+  stopExamTimer();
+  examTimerInterval = setInterval(() => {
+    examTimeRemaining--;
+    updateExamTimerLabel();
+    saveQuizStateToLocalStorage();
+    if (examTimeRemaining <= 0) {
+      stopExamTimer();
+      showResults();
+    }
+  }, 1000);
+}
+function startExamTimer(seconds) {
+  examTimeRemaining = seconds;
+  el("exam-timer-label").classList.remove("hidden");
+  updateExamTimerLabel();
+  beginExamCountdownInterval();
+}
+
+// ---- Plataforma: usuario / navegación / historial ----
+const ADMIN_PIN = "CCAF-ADMIN-2026"; // Solo separa roles dentro del artifact, no es una contraseña con seguridad real.
+let currentUser = { name: "", email: "", role: "usuario" };
+
+function showScreen(id) {
+  ["screen-firebase-config","screen-register","screen-menu","screen-history","screen-modules","screen-admin-create","screen-live-join","screen-live-wait","screen-live-quiz","screen-live-results","screen-setup","screen-quiz","screen-results","screen-monitor"].forEach(s => {
+    el(s).classList.toggle("hidden", s !== id);
+  });
+}
+
+el("role-user-btn").onclick = () => {
+  el("role-user-btn").classList.add("active");
+  el("role-admin-btn").classList.remove("active");
+  el("admin-pin-wrap").classList.add("hidden");
+};
+el("role-admin-btn").onclick = () => {
+  el("role-admin-btn").classList.add("active");
+  el("role-user-btn").classList.remove("active");
+  el("admin-pin-wrap").classList.remove("hidden");
+};
+
+function isValidEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+async function findAccountByEmail(email) {
+  if (!STORAGE_AVAILABLE) return null;
+  try {
+    const r = await window.storage.get("account:" + email, true);
+    return r ? JSON.parse(r.value) : null;
+  } catch (e) { return null; }
+}
+
+el("register-btn").onclick = async () => {
+  const email = el("email-input").value.trim().toLowerCase();
+  el("email-error").style.display = "none";
+  if (!isValidEmail(email)) {
+    el("email-error").style.display = "block";
+    el("email-input").focus();
+    return;
+  }
+  let name = el("name-input").value.trim();
+  const wantsAdmin = el("role-admin-btn").classList.contains("active");
+  if (wantsAdmin) {
+    const pin = el("admin-pin-input").value.trim();
+    if (pin !== ADMIN_PIN) {
+      el("admin-pin-error").style.display = "block";
+      return;
+    }
+  }
+  el("admin-pin-error").style.display = "none";
+
+  const existingAccount = await findAccountByEmail(email);
+  if (!name && existingAccount) name = existingAccount.name;
+  if (!name) { el("name-input").focus(); return; }
+
+  currentUser = { name, email, role: wantsAdmin ? "admin" : "usuario" };
+  if (STORAGE_AVAILABLE) {
+    try {
+      await window.storage.set("account:" + email, JSON.stringify({
+        name, email,
+        role: currentUser.role,
+        createdAt: existingAccount ? existingAccount.createdAt : Date.now(),
+        lastLogin: Date.now()
+      }), true);
+    } catch (e) {}
+  }
+  renderMenu();
+  saveUserToLocalStorage();
+  showScreen("screen-menu");
+};
+
+const LS_KEY_USER = "cca_f_user";
+const LS_KEY_ACTIVE_LIVE = "cca_f_active_live";
+const LS_KEY_QUIZ_STATE = "cca_f_quiz_state";
+
+function saveUserToLocalStorage() {
+  try { localStorage.setItem(LS_KEY_USER, JSON.stringify(currentUser)); } catch (e) {}
+}
+function loadUserFromLocalStorage() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_USER) || "null"); } catch (e) { return null; }
+}
+function clearSavedSession() {
+  try {
+    localStorage.removeItem(LS_KEY_USER);
+    localStorage.removeItem(LS_KEY_ACTIVE_LIVE);
+    localStorage.removeItem(LS_KEY_QUIZ_STATE);
+  } catch (e) {}
+}
+function saveActiveLiveSession(code) {
+  try { localStorage.setItem(LS_KEY_ACTIVE_LIVE, JSON.stringify({ code, email: currentUser.email })); } catch (e) {}
+}
+function clearActiveLiveSession() {
+  try { localStorage.removeItem(LS_KEY_ACTIVE_LIVE); } catch (e) {}
+}
+function saveQuizStateToLocalStorage() {
+  try {
+    localStorage.setItem(LS_KEY_QUIZ_STATE, JSON.stringify({
+      email: currentUser.email, quizMode, quizModuleCode, quizModuleName,
+      quizQuestions, currentIndex, userScore, quizUserAnswers, perDomainScore,
+      userName, sessionKey, examTimeRemaining
+    }));
+  } catch (e) {}
+}
+function clearQuizStateFromLocalStorage() {
+  try { localStorage.removeItem(LS_KEY_QUIZ_STATE); } catch (e) {}
+}
+
+function renderMenu() {
+  el("menu-user-name").textContent = currentUser.name;
+  el("menu-admin-badge").classList.toggle("hidden", currentUser.role !== "admin");
+  el("menu-admin-panel-btn").classList.toggle("hidden", currentUser.role !== "admin");
+}
+
+el("switch-user-btn").onclick = () => {
+  clearSavedSession();
+  el("email-input").value = "";
+  el("name-input").value = "";
+  el("admin-pin-input").value = "";
+  el("email-error").style.display = "none";
+  el("admin-pin-error").style.display = "none";
+  el("role-user-btn").classList.add("active");
+  el("role-admin-btn").classList.remove("active");
+  el("admin-pin-wrap").classList.add("hidden");
+  showScreen("screen-register");
+};
+
+el("menu-async-btn").onclick = () => {
+  el("monitor-btn").style.display = (STORAGE_AVAILABLE && currentUser.role === "admin") ? "block" : "none";
+  quizMode = "general";
+  quizModuleCode = null;
+  showScreen("screen-setup");
+};
+
+el("menu-modules-btn").onclick = () => { renderModulesList(); showScreen("screen-modules"); };
+el("back-from-modules-btn").onclick = () => showScreen("screen-menu");
+
+el("menu-live-btn").onclick = () => {
+  el("live-code-input").value = "";
+  el("live-join-error").style.display = "none";
+  showScreen("screen-live-join");
+};
+el("back-from-live-join-btn").onclick = () => showScreen("screen-menu");
+
+el("menu-admin-panel-btn").onclick = () => {
+  el("admin-created-wrap").classList.add("hidden");
+  el("admin-live-started-note").classList.add("hidden");
+  el("admin-live-monitor-wrap").classList.add("hidden");
+  currentLiveCode = null;
+  showScreen("screen-admin-create");
+  renderRecentSessions();
+};
+el("back-from-admin-create-btn").onclick = () => {
+  stopAdminPolling();
+  hideLiveSessionTimer();
+  showScreen("screen-menu");
+};
+
+function renderModulesList() {
+  const wrap = el("modules-list");
+  wrap.innerHTML = "";
+  domains.forEach(d => {
+    const btn = document.createElement("button");
+    btn.className = "menu-card";
+    btn.innerHTML = '<div class="menu-card-title">' + d.code + ' &middot; ' + d.name + '</div><div class="menu-card-desc">' + d.questions.length + ' preguntas disponibles en este módulo</div>';
+    btn.onclick = () => startModuleQuiz(d.code);
+    wrap.appendChild(btn);
+  });
+}
+
+function startModuleQuiz(domainCode) {
+  const domain = domains.find(d => d.code === domainCode);
+  if (!domain) return;
+  quizMode = "modulo";
+  quizModuleCode = domainCode;
+  quizModuleName = domain.name;
+  userName = currentUser.name || "Anonymous";
+  quizQuestions = shuffle(domain.questions).map(q => Object.assign({ domainCode: domain.code, domainName: domain.name }, q));
+  currentIndex = 0;
+  userScore = 0;
+  quizUserAnswers = [];
+  sessionKey = "session:" + userName + "-" + Date.now();
+  perDomainScore = {};
+  domains.forEach(d => { perDomainScore[d.code] = { correct: 0, total: 0 }; });
+  showScreen("screen-quiz");
+  el("question-nav-panel").classList.add("hidden");
+  el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
+  renderQuestion();
+  persistSession(false);
+  stopExamTimer();
+  el("exam-timer-label").classList.add("hidden");
+}
+el("back-from-setup-btn").onclick = () => showScreen("screen-menu");
+el("back-to-menu-btn").onclick = () => showScreen("screen-menu");
+
+el("menu-history-btn").onclick = () => { renderHistory(); showScreen("screen-history"); };
+el("back-from-history-btn").onclick = () => showScreen("screen-menu");
+
+function historyBarColor(pct) {
+  if (pct >= PASS_PCT) return "var(--correct)";
+  if (pct >= 50) return "#F5A623";
+  return "var(--wrong)";
+}
+
+async function renderHistory() {
+  const list = el("history-list");
+  list.innerHTML = "";
+  if (!STORAGE_AVAILABLE) {
+    list.innerHTML = '<div class="empty-state">El historial no está disponible en este momento.</div>';
+    return;
+  }
+  let keys;
+  try {
+    keys = await window.storage.list("history:" + currentUser.email + ":", false);
+  } catch (e) { keys = null; }
+  if (!keys || !keys.keys || keys.keys.length === 0) {
+    list.innerHTML = '<div class="empty-state">Todavía no tienes intentos registrados.<br>Realiza un examen para ver tu progreso aquí.</div>';
+    return;
+  }
+  const entries = [];
+  for (const k of keys.keys) {
+    try {
+      const r = await window.storage.get(k, false);
+      if (r && r.value) entries.push(JSON.parse(r.value));
+    } catch (e) {}
+  }
+  entries.sort((a, b) => b.timestamp - a.timestamp);
+  entries.forEach(entry => {
+    const div = document.createElement("div");
+    div.className = "history-item";
+    const dateStr = new Date(entry.timestamp).toLocaleString();
+    const color = historyBarColor(entry.pct);
+    div.innerHTML =
+      '<div class="history-top"><span class="history-type">' + entry.tipo + (entry.modulo ? " &middot; " + entry.modulo : "") + '</span><span class="history-date">' + dateStr + '</span></div>' +
+      '<div class="history-bar-track"><div class="history-bar-fill" style="width:' + entry.pct + '%; background:' + color + ';"></div></div>' +
+      '<div class="history-bottom"><span>' + entry.correctas + ' correctas / ' + entry.incorrectas + ' incorrectas &middot; ' + entry.total + ' preguntas</span><span class="history-score" style="color:' + color + ';">' + entry.pct + '%</span></div>';
+    list.appendChild(div);
+  });
+}
+
+async function saveHistoryEntry(pct) {
+  if (!STORAGE_AVAILABLE || !currentUser.email) return;
+  const ts = Date.now();
+  const entry = {
+    tipo: quizMode === "modulo" ? "Módulo" : "Examen general",
+    modulo: quizMode === "modulo" ? (quizModuleCode + " · " + quizModuleName) : null,
+    timestamp: ts,
+    total: quizQuestions.length,
+    correctas: userScore,
+    incorrectas: quizQuestions.length - userScore,
+    pct: pct
+  };
+  try { await window.storage.set("history:" + currentUser.email + ":" + ts, JSON.stringify(entry), false); } catch (e) {}
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function persistSession(finished) {
+  if (!STORAGE_AVAILABLE) return;
+  const total = quizQuestions.length;
+  const entry = {
+    name: userName,
+    current: currentIndex + 1,
+    total: total,
+    correct: userScore,
+    finished: !!finished,
+    lastUpdate: Date.now(),
+  };
+  try { await window.storage.set(sessionKey, JSON.stringify(entry), true); } catch (e) {}
+}
+
+el("start-btn").onclick = () => {
+  quizMode = "general";
+  quizModuleCode = null;
+  userName = currentUser.name || "Anonymous";
+  quizQuestions = [];
+  domains.forEach(d => {
+    d.questions.forEach(q => quizQuestions.push(Object.assign({ domainCode: d.code, domainName: d.name }, q)));
+  });
+  quizQuestions = shuffle(quizQuestions).slice(0, 30);
+  currentIndex = 0;
+  userScore = 0;
+  quizUserAnswers = [];
+  sessionKey = "session:" + userName + "-" + Date.now();
+  perDomainScore = {};
+  domains.forEach(d => { perDomainScore[d.code] = { correct: 0, total: 0 }; });
+  el("screen-setup").classList.add("hidden");
+  el("screen-quiz").classList.remove("hidden");
+  el("question-nav-panel").classList.add("hidden");
+  el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
+  renderQuestion();
+  persistSession(false);
+  startExamTimer(20 * 60);
+};
+
+function renderQuestion() {
+  answered = !!quizUserAnswers[currentIndex];
+  pendingIdx = null;
+  const q = quizQuestions[currentIndex];
+  el("progress-fill").style.width = Math.round((currentIndex / quizQuestions.length) * 100) + "%";
+  el("progress-label").textContent = "Question " + (currentIndex + 1) + " of " + quizQuestions.length;
+  el("domain-label").innerHTML = '<span class="domain-dot" style="background:' + DOMAIN_COLORS[q.domainCode] + '"></span>' + q.domainCode + " \u00b7 " + q.domainName;
+  el("scenario-text").textContent = q.scenario;
+  el("scenario-text").classList.toggle("hidden", !q.scenario);
+  el("question-text").textContent = q.question;
+  el("feedback-container").innerHTML = "";
+  renderQuestionNavPanel();
+
+  const container = el("options-container");
+  container.innerHTML = "";
+  q.options.forEach((opt, idx) => {
+    const b = document.createElement("button");
+    b.className = "option";
+    b.innerHTML = '<span class="option-letter">' + String.fromCharCode(65 + idx) + ')</span>' + opt;
+    b.onclick = () => handleOptionClick(idx);
+    container.appendChild(b);
+  });
+
+  if (answered) {
+    renderAnsweredFeedback(quizUserAnswers[currentIndex].selectedIdx);
+  } else {
+    el("next-btn").disabled = true;
+    el("next-btn").textContent = "Answer to continue";
+  }
+}
+
+function renderQuestionNavPanel() {
+  const panel = el("question-nav-panel");
+  panel.innerHTML = "";
+  quizQuestions.forEach((q, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "question-nav-btn" + (quizUserAnswers[i] ? " nav-answered" : "") + (i === currentIndex ? " nav-current" : "");
+    b.textContent = (i + 1);
+    b.onclick = () => { currentIndex = i; renderQuestion(); saveQuizStateToLocalStorage(); };
+    panel.appendChild(b);
+  });
+}
+el("toggle-nav-panel-btn").onclick = () => {
+  const panel = el("question-nav-panel");
+  const showing = !panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", showing);
+  el("toggle-nav-panel-btn").textContent = showing ? "Ver preguntas respondidas ▾" : "Ocultar preguntas respondidas ▴";
+};
+
+function handleOptionClick(idx) {
+  if (answered) return; // ya confirmada: revisar, no se puede cambiar
+  pendingIdx = idx;
+  const buttons = el("options-container").querySelectorAll(".option");
+  buttons.forEach((b, i) => b.classList.toggle("selected-pending", i === idx));
+  el("next-btn").disabled = false;
+  el("next-btn").textContent = "Confirm answer";
+}
+
+function renderAnsweredFeedback(idx) {
+  const q = quizQuestions[currentIndex];
+  const correct = idx === q.correct;
+  const buttons = el("options-container").querySelectorAll(".option");
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    b.classList.remove("selected-pending");
+    if (i === q.correct) b.classList.add("reveal-correct");
+    if (i === idx && !correct) b.classList.add("selected-wrong");
+    if (i === idx && correct) b.classList.add("selected-correct");
+  });
+
+  const fb = el("feedback-container");
+  fb.innerHTML = "";
+  const box = document.createElement("div");
+  box.className = "feedback " + (correct ? "correct" : "wrong");
+
+  let html = '<div class="feedback-title">' + (correct ? "Correct" : "Not quite") + '</div>';
+  if (!correct) {
+    html += '<div class="compare-row">';
+    html += '<div class="compare-box mine"><div class="compare-label">Your answer</div>' + String.fromCharCode(65 + idx) + ') ' + q.options[idx] + '</div>';
+    html += '<div class="compare-box correctone"><div class="compare-label">Correct answer</div>' + String.fromCharCode(65 + q.correct) + ') ' + q.options[q.correct] + '</div>';
+    html += '</div>';
+  }
+  html += '<div class="explanation">' + q.why + '</div>';
+  html += '<div class="source-tag">Source: ' + q.source + '</div>';
+  html += '<a class="learn-more" href="' + q.doc + '" target="_blank" rel="noopener">Learn more in the Anthropic docs &#8594;</a>';
+  box.innerHTML = html;
+  fb.appendChild(box);
+
+  el("next-btn").disabled = false;
+  el("next-btn").textContent = currentIndex === quizQuestions.length - 1 ? "See results" : "Next question";
+}
+
+function confirmAnswer(idx) {
+  answered = true;
+  const q = quizQuestions[currentIndex];
+  const correct = idx === q.correct;
+  perDomainScore[q.domainCode].total++;
+  if (correct) { userScore++; perDomainScore[q.domainCode].correct++; }
+  quizUserAnswers[currentIndex] = { selectedIdx: idx, correct };
+  renderQuestionNavPanel();
+  renderAnsweredFeedback(idx);
+  persistSession(false);
+  saveQuizStateToLocalStorage();
+}
+
+el("next-btn").onclick = () => {
+  if (!answered) {
+    if (pendingIdx === null) return;
+    confirmAnswer(pendingIdx);
+    return;
+  }
+  if (currentIndex < quizQuestions.length - 1) {
+    currentIndex++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+};
+
+function showResults() {
+  stopExamTimer();
+  clearQuizStateFromLocalStorage();
+  el("screen-quiz").classList.add("hidden");
+  el("screen-results").classList.remove("hidden");
+  el("final-score").textContent = userScore + " / " + quizQuestions.length;
+  const pct = Math.round((userScore / quizQuestions.length) * 100);
+  const passed = pct >= PASS_PCT;
+  el("grade-badge-container").innerHTML = '<div class="grade-badge ' + (passed ? "pass" : "fail") + '">' + pct + '% \u2014 ' + (passed ? "PASS" : "FAIL") + '</div>';
+  const bd = el("domain-breakdown");
+  bd.innerHTML = "";
+  Object.keys(perDomainScore).forEach(code => {
+    const s = perDomainScore[code];
+    if (s.total === 0) return;
+    const pctD = Math.round((s.correct / s.total) * 100);
+    const row = document.createElement("div");
+    row.className = "domain-score-row";
+    row.innerHTML = '<span><span class="domain-dot" style="background:' + DOMAIN_COLORS[code] + '"></span>' + code + "</span><span>" + s.correct + " / " + s.total + " &middot; " + pctD + "%</span>";
+    bd.appendChild(row);
+  });
+  persistSession(true);
+  saveHistoryEntry(pct);
+}
+
+el("restart-btn").onclick = () => {
+  if (quizMode === "modulo") {
+    renderModulesList();
+    showScreen("screen-modules");
+  } else {
+    showScreen("screen-setup");
+  }
+};
+
+const FOCUS_THRESHOLD = 70;
+
+function generatePdfReport() {
+  if (!window.jspdf) { alert("PDF library didn't load \u2014 check your internet connection and try again."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pct = Math.round((userScore / quizQuestions.length) * 100);
+  const passed = pct >= PASS_PCT;
+  const domainRows = Object.keys(perDomainScore)
+    .map(code => {
+      const s = perDomainScore[code];
+      const d = domains.find(dm => dm.code === code);
+      const dPct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
+      return { code, name: d ? d.name : code, correct: s.correct, total: s.total, pct: dPct };
+    })
+    .filter(r => r.total > 0)
+    .sort((a, b) => a.pct - b.pct);
+
+  const weak = domainRows.filter(r => r.pct < FOCUS_THRESHOLD);
+
+  let y = 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(217, 119, 87);
+  doc.text("CCA-F Simulation Report", 20, y);
+  y += 10;
+  doc.setFontSize(11);
+  doc.setTextColor(90, 90, 90);
+  doc.text("Name: " + userName + "   |   Date: " + new Date().toLocaleDateString(), 20, y);
+  y += 14;
+
+  doc.setDrawColor(220, 220, 220);
+  doc.line(20, y, 190, y);
+  y += 12;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(30, 30, 30);
+  doc.text("Overall score: " + userScore + " / " + quizQuestions.length + "  (" + pct + "%)", 20, y);
+  y += 9;
+  doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
+  doc.text(passed ? "PASS" : "FAIL", 20, y);
+  doc.setFontSize(10);
+  doc.setTextColor(120, 120, 120);
+  doc.text("(real exam pass mark: 72%)", 40, y);
+  y += 14;
+
+  doc.setDrawColor(220, 220, 220);
+  doc.line(20, y, 190, y);
+  y += 12;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(30, 30, 30);
+  doc.text("Domain breakdown", 20, y);
+  y += 9;
+
+  domainRows.forEach(r => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(30, 30, 30);
+    doc.text(r.code + " \u2014 " + r.name, 20, y);
+    doc.setFont("helvetica", "normal");
+    const scoreColor = r.pct < FOCUS_THRESHOLD ? [200, 60, 50] : [30, 140, 80];
+    doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.text(r.correct + " / " + r.total + "  (" + r.pct + "%)", 150, y);
+    y += 8;
+  });
+
+  y += 6;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(20, y, 190, y);
+  y += 12;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(30, 30, 30);
+  doc.text("Where to focus your study", 20, y);
+  y += 9;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+
+  if (weak.length === 0) {
+    doc.setTextColor(30, 140, 80);
+    doc.text("No domain fell below " + FOCUS_THRESHOLD + "%. Keep reviewing all five domains evenly.", 20, y);
+    y += 8;
+  } else {
+    doc.setTextColor(60, 60, 60);
+    doc.text("Prioritise these domains before your next attempt:", 20, y);
+    y += 9;
+    weak.forEach(r => {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(200, 60, 50);
+      doc.text("\u2022 " + r.code + " (" + r.pct + "%) \u2014 " + r.name, 24, y);
+      y += 8;
+    });
+    y += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(90, 90, 90);
+    const tip = "Review the Quick Reference decision rules and common exam traps for each domain above, then retake a simulation focused on those questions.";
+    const split = doc.splitTextToSize(tip, 165);
+    doc.text(split, 20, y);
+    y += split.length * 6;
+  }
+
+  y += 10;
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text("Generated by the CCA-F Simulation tool. Pair this report with docs.claude.com for deeper reading on each domain.", 20, y);
+
+  doc.save("CCA-F_Report_" + userName.replace(/[^a-z0-9]/gi, "_") + ".pdf");
+}
+
+el("pdf-btn").onclick = generatePdfReport;
+
+el("copy-results-btn").onclick = () => {
+  const pct = Math.round((userScore / quizQuestions.length) * 100);
+  const grade = pct >= PASS_PCT ? "PASS" : "FAIL";
+  let text = "CCAR-F simulation result\nName: " + userName + "\nScore: " + userScore + " / " + quizQuestions.length + " (" + pct + "%) \u2014 " + grade + "\n";
+  Object.keys(perDomainScore).forEach(code => {
+    const s = perDomainScore[code];
+    if (s.total > 0) text += code + ": " + s.correct + "/" + s.total + "  ";
+  });
+  const done = () => alert("Copied! Paste it in WhatsApp, email, or wherever you're sending results to your instructor.");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => alert(text));
+  } else {
+    alert(text);
+  }
+};
+
+let monitorInterval = null;
+
+async function loadMonitor() {
+  const body = el("monitor-body");
+  const empty = el("monitor-empty");
+  try {
+    const list = await window.storage.list("session:", true);
+    if (!list || !list.keys || list.keys.length === 0) {
+      body.innerHTML = "";
+      empty.textContent = "No one has started the simulation yet.";
+      return;
+    }
+    const entries = [];
+    for (const k of list.keys) {
+      try {
+        const r = await window.storage.get(k, true);
+        if (r && r.value) entries.push(JSON.parse(r.value));
+      } catch (e) {}
+    }
+    entries.sort((a, b) => b.lastUpdate - a.lastUpdate);
+    empty.textContent = "";
+    body.innerHTML = "";
+    entries.forEach(e => {
+      const pct = Math.round((e.correct / e.total) * 100) || 0;
+      let statusHtml;
+      if (!e.finished) {
+        statusHtml = '<span class="status-chip progress">In progress</span>';
+      } else if (pct >= PASS_PCT) {
+        statusHtml = '<span class="status-chip done-pass">Pass</span>';
+      } else {
+        statusHtml = '<span class="status-chip done-fail">Fail</span>';
+      }
+      const row = document.createElement("tr");
+      row.innerHTML = "<td>" + e.name + "</td><td>" + e.current + " / " + e.total + "</td><td>" + e.correct + "</td><td>" + pct + "%</td><td>" + statusHtml + "</td>";
+      body.appendChild(row);
+    });
+  } catch (e) {
+    empty.textContent = "Monitor unavailable right now.";
+  }
+}
+
+el("monitor-btn").onclick = () => {
+  showScreen("screen-monitor");
+  loadMonitor();
+  monitorInterval = setInterval(loadMonitor, 4000);
+};
+el("back-from-monitor-btn").onclick = () => {
+  if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+  showScreen("screen-setup");
+};
+
+// ================= SESIÓN EN VIVO (Fase 3) =================
+
+function genLiveCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+let currentLiveCode = null;
+let adminPollInterval = null;
+let liveWaitInterval = null;
+let liveQuizInterval = null;
+let liveCurrentQIndex = -1;
+let liveAnsweredThisQ = false;
+let liveMyStartTime = null;
+let liveSessionQuestions = LIVE_QUESTIONS;
+const LIVE_SESSION_TOTAL_SEC = 25 * 60;
+let liveSessionTotalSec = LIVE_SESSION_TOTAL_SEC;
+let livePendingIdx = null;
+let liveMyAnswers = [];
+let lastLiveResult = null;
+
+function stopAdminPolling() {
+  if (adminPollInterval) { clearInterval(adminPollInterval); adminPollInterval = null; }
+}
+function stopLiveWaitPolling() {
+  if (liveWaitInterval) { clearInterval(liveWaitInterval); liveWaitInterval = null; }
+}
+function stopLiveQuizPolling() {
+  if (liveQuizInterval) { clearInterval(liveQuizInterval); liveQuizInterval = null; }
+}
+
+// ---- Admin: crear, encontrar y monitorear sesiones (cualquier Admin puede ver cualquier sesión) ----
+el("create-live-btn").onclick = async () => {
+  if (!STORAGE_AVAILABLE) { alert("El almacenamiento no está disponible ahora mismo."); return; }
+  const code = genLiveCode();
+  const questionCount = Math.min(LIVE_QUESTIONS.length, parseInt(el("live-question-count-select").value, 10) || 20);
+  const totalSeconds = (parseInt(el("live-duration-select").value, 10) || 25) * 60;
+  const questionOrder = shuffle(LIVE_QUESTIONS.map((q, i) => i)).slice(0, questionCount);
+  const meta = {
+    code, status: "waiting", startTime: null,
+    createdBy: currentUser.name, createdAt: Date.now(),
+    totalQuestions: questionCount, totalSeconds, questionOrder
+  };
+  try { await window.storage.set("live:" + code + ":meta", JSON.stringify(meta), true); } catch (e) {}
+  await attachAdminToSession(code);
+};
+
+el("admin-watch-code-btn").onclick = async () => {
+  const code = el("admin-watch-code-input").value.trim().toUpperCase();
+  if (!code) return;
+  let meta;
+  try {
+    const r = await window.storage.get("live:" + code + ":meta", true);
+    meta = r ? JSON.parse(r.value) : null;
+  } catch (e) { meta = null; }
+  if (!meta) { alert("No encontramos una sesión con ese código."); return; }
+  await attachAdminToSession(code);
+};
+
+async function attachAdminToSession(code) {
+  stopAdminPolling();
+  currentLiveCode = code;
+  let meta = null;
+  try {
+    const r = await window.storage.get("live:" + code + ":meta", true);
+    meta = r ? JSON.parse(r.value) : null;
+  } catch (e) {}
+  el("admin-live-code").textContent = code;
+  el("admin-monitor-code-label").textContent = code;
+  el("admin-created-wrap").classList.remove("hidden");
+  const startBtn = el("start-live-btn");
+  const startedNote = el("admin-live-started-note");
+  if (meta && meta.status === "running") {
+    startBtn.classList.add("hidden");
+    startedNote.classList.remove("hidden");
+    startedNote.textContent = "Sesión en curso. Los participantes ya pueden entrar.";
+  } else {
+    startBtn.classList.remove("hidden");
+    startedNote.classList.add("hidden");
+  }
+  pollAdminParticipants();
+  adminPollInterval = setInterval(pollAdminParticipants, 3000);
+}
+
+async function renderRecentSessions() {
+  const wrap = el("admin-recent-sessions-list");
+  if (!STORAGE_AVAILABLE) { wrap.textContent = "No disponible."; return; }
+  let keys;
+  try {
+    keys = await window.storage.list("live:", true);
+  } catch (e) { keys = null; }
+  const metaKeys = (keys && keys.keys) ? keys.keys.filter(k => k.endsWith(":meta")) : [];
+  const metas = [];
+  for (const k of metaKeys) {
+    try {
+      const r = await window.storage.get(k, true);
+      if (r && r.value) metas.push(JSON.parse(r.value));
+    } catch (e) {}
+  }
+  metas.sort((a, b) => b.createdAt - a.createdAt);
+  const recent = metas.slice(0, 8);
+  if (!recent.length) { wrap.textContent = "Todavía no se ha creado ninguna sesión."; return; }
+  wrap.innerHTML = "";
+  recent.forEach(m => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);";
+    const statusLabel = m.status === "running" ? "En curso" : "Esperando";
+    row.innerHTML = '<span><strong style="color:var(--black);">' + m.code + '</strong> &middot; ' + (m.totalQuestions || "?") + ' preguntas &middot; ' + statusLabel + ' &middot; creada por ' + (m.createdBy || "?") + '</span>';
+    const btn = document.createElement("button");
+    btn.className = "secondary";
+    btn.textContent = "Monitorear";
+    btn.style.cssText = "width:auto; padding:6px 14px; font-size:13px;";
+    btn.onclick = () => attachAdminToSession(m.code);
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+async function pollAdminParticipants() {
+  if (!currentLiveCode) return;
+  let meta;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":meta", true);
+    meta = JSON.parse(r.value);
+  } catch (e) { meta = null; }
+
+  let names = [];
+  const participants = [];
+  try {
+    const list = await window.storage.list("live:" + currentLiveCode + ":participant:", true);
+    names = (list && list.keys) ? list.keys.map(k => k.split(":participant:")[1]) : [];
+    for (const n of names) {
+      try {
+        const pr = await window.storage.get("live:" + currentLiveCode + ":participant:" + n, true);
+        if (pr && pr.value) participants.push(JSON.parse(pr.value));
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  el("admin-participant-count").textContent = participants.length;
+  el("admin-participant-list").textContent = participants.length ? participants.map(p => p.name).join(", ") : "Nadie se ha unido todavía.";
+
+  if (!meta || meta.status !== "running") {
+    el("admin-live-monitor-wrap").classList.add("hidden");
+    return;
+  }
+
+  el("admin-live-monitor-wrap").classList.remove("hidden");
+  el("admin-monitor-code-label").textContent = currentLiveCode;
+  const total = (meta.questionOrder && meta.questionOrder.length) || meta.totalQuestions || LIVE_QUESTIONS.length;
+  const totalSeconds = meta.totalSeconds || LIVE_SESSION_TOTAL_SEC;
+
+  const body = el("admin-monitor-body");
+  body.innerHTML = "";
+  participants.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+    const answered = p.answers.filter(a => a).length;
+    const correctCount = p.answers.filter(a => a && a.correct).length;
+    const pct = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
+    let remainingLabel = "No ha iniciado";
+    let timedOut = false;
+    if (p.startTime) {
+      const elapsed = Math.floor((Date.now() - p.startTime) / 1000);
+      const remaining = Math.max(0, totalSeconds - elapsed);
+      const m = Math.floor(remaining / 60), s = remaining % 60;
+      remainingLabel = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+      timedOut = remaining <= 0;
+    }
+    const finished = answered >= total || timedOut;
+    const statusHtml = finished
+      ? '<span class="status-chip ' + (Math.round((correctCount / total) * 100) >= PASS_PCT ? "done-pass" : "done-fail") + '">Terminó</span>'
+      : (p.startTime ? '<span class="status-chip progress">En progreso</span>' : '<span class="status-chip progress">Esperando</span>');
+    const row = document.createElement("tr");
+    row.innerHTML = "<td>" + p.name + "</td><td>" + answered + " / " + total + "</td><td>" + correctCount + "</td><td>" + pct + "%</td><td>" + remainingLabel + "</td><td>" + statusHtml + "</td>";
+    body.appendChild(row);
+  });
+}
+
+el("start-live-btn").onclick = async () => {
+  if (!currentLiveCode) return;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":meta", true);
+    const meta = JSON.parse(r.value);
+    meta.status = "running";
+    meta.startTime = Date.now();
+    await window.storage.set("live:" + currentLiveCode + ":meta", JSON.stringify(meta), true);
+    el("start-live-btn").classList.add("hidden");
+    el("admin-live-started-note").classList.remove("hidden");
+    el("admin-live-started-note").textContent = "Sesión iniciada. Los participantes ya pueden entrar.";
+  } catch (e) {}
+};
+
+// ---- Participante: unirse ----
+el("join-live-btn").onclick = async () => {
+  if (!STORAGE_AVAILABLE) { alert("El almacenamiento no está disponible ahora mismo."); return; }
+  const code = el("live-code-input").value.trim().toUpperCase();
+  if (!code) return;
+  let meta;
+  try {
+    const r = await window.storage.get("live:" + code + ":meta", true);
+    meta = r ? JSON.parse(r.value) : null;
+  } catch (e) { meta = null; }
+  if (!meta) {
+    el("live-join-error").style.display = "block";
+    return;
+  }
+  el("live-join-error").style.display = "none";
+  currentLiveCode = code;
+
+  // Si ya existe un registro previo (reconexión), lo conservamos para no perder su progreso ni su cronómetro personal.
+  let participant = null;
+  try {
+    const r = await window.storage.get("live:" + code + ":participant:" + currentUser.email, true);
+    participant = r ? JSON.parse(r.value) : null;
+  } catch (e) {}
+  if (!participant) {
+    participant = { name: currentUser.name, joinedAt: Date.now(), answers: [], lastSeen: Date.now(), startTime: null };
+    try { await window.storage.set("live:" + code + ":participant:" + currentUser.email, JSON.stringify(participant), true); } catch (e) {}
+  }
+
+  if (meta.status === "running") {
+    enterLiveQuiz();
+  } else {
+    el("wait-live-code").textContent = code;
+    showScreen("screen-live-wait");
+    stopLiveWaitPolling();
+    liveWaitInterval = setInterval(checkLiveSessionStarted, 2000);
+  }
+};
+
+async function checkLiveSessionStarted() {
+  if (!currentLiveCode) return;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":meta", true);
+    const meta = JSON.parse(r.value);
+    if (meta.status === "running") {
+      stopLiveWaitPolling();
+      enterLiveQuiz();
+    }
+  } catch (e) {}
+}
+
+el("leave-live-wait-btn").onclick = () => {
+  stopLiveWaitPolling();
+  hideLiveSessionTimer();
+  currentLiveCode = null;
+  showScreen("screen-menu");
+};
+
+// ---- Participante: motor de pregunta a ritmo propio, con cronómetro personal de 25 min ----
+
+function updateLiveSessionTimer(remainingSec) {
+  const wrap = el("live-session-timer");
+  const label = el("live-session-timer-label");
+  const remaining = Math.max(0, remainingSec);
+  const m = Math.floor(remaining / 60), s = remaining % 60;
+  label.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  wrap.classList.remove("hidden");
+  wrap.style.color = remaining <= 60 ? "var(--wrong)" : "";
+}
+function hideLiveSessionTimer() {
+  el("live-session-timer").classList.add("hidden");
+}
+
+async function enterLiveQuiz() {
+  showScreen("screen-live-quiz");
+  stopLiveQuizPolling();
+
+  let meta;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":meta", true);
+    meta = JSON.parse(r.value);
+  } catch (e) { meta = null; }
+  const order = (meta && meta.questionOrder && meta.questionOrder.length) ? meta.questionOrder : LIVE_QUESTIONS.map((q, i) => i);
+  liveSessionQuestions = order.map(i => LIVE_QUESTIONS[i]);
+  liveSessionTotalSec = (meta && meta.totalSeconds) ? meta.totalSeconds : LIVE_SESSION_TOTAL_SEC;
+
+  // Cronómetro personal: arranca la primera vez que ESTA persona entra, no con la sesión global.
+  let p;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":participant:" + currentUser.email, true);
+    p = JSON.parse(r.value);
+  } catch (e) { p = { answers: [], startTime: null }; }
+  if (!p.startTime) {
+    p.startTime = Date.now();
+    try { await window.storage.set("live:" + currentLiveCode + ":participant:" + currentUser.email, JSON.stringify(p), true); } catch (e) {}
+  }
+  liveMyStartTime = p.startTime;
+  liveMyAnswers = p.answers.slice();
+  saveActiveLiveSession(currentLiveCode);
+
+  // Retoma justo donde se quedó (por si recarga la página), y nunca antes revela si esas respuestas eran correctas.
+  liveCurrentQIndex = Math.min(p.answers.length, liveSessionQuestions.length - 1);
+  liveAnsweredThisQ = !!p.answers[liveCurrentQIndex];
+  renderLiveQuestion(liveCurrentQIndex);
+
+  tickLivePersonalTimer();
+  liveQuizInterval = setInterval(tickLivePersonalTimer, 1000);
+}
+
+function tickLivePersonalTimer() {
+  if (!liveMyStartTime) return;
+  const elapsedSec = Math.floor((Date.now() - liveMyStartTime) / 1000);
+  const remaining = liveSessionTotalSec - elapsedSec;
+  updateLiveSessionTimer(remaining);
+  if (remaining <= 0) {
+    stopLiveQuizPolling();
+    showLiveResults();
+  }
+}
+
+function renderLiveQuestion(idx) {
+  const q = liveSessionQuestions[idx];
+  livePendingIdx = null;
+  el("live-progress-fill").style.width = Math.round((idx / liveSessionQuestions.length) * 100) + "%";
+  el("live-progress-label").textContent = "Pregunta " + (idx + 1) + " de " + liveSessionQuestions.length;
+  el("live-question-text").textContent = q.question;
+  const container = el("live-options-container");
+  container.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const b = document.createElement("button");
+    b.className = "option";
+    b.innerHTML = '<span class="option-letter">' + String.fromCharCode(65 + i) + ')</span>' + opt;
+    b.onclick = () => handleLiveOptionClick(idx, i);
+    container.appendChild(b);
+  });
+  const nextBtn = el("live-next-btn");
+  if (liveAnsweredThisQ) {
+    const savedIdx = liveMyAnswers[idx] ? liveMyAnswers[idx].selectedIdx : null;
+    if (savedIdx !== null) {
+      container.querySelectorAll(".option").forEach((b, i) => {
+        b.disabled = true;
+        if (i === savedIdx) b.classList.add("selected-pending");
+      });
+    }
+    nextBtn.disabled = false;
+    nextBtn.textContent = (idx === liveSessionQuestions.length - 1) ? "Finalizar" : "Siguiente";
+  } else {
+    nextBtn.disabled = true;
+    nextBtn.textContent = "Selecciona una respuesta";
+  }
+}
+
+function handleLiveOptionClick(idx, selectedIdx) {
+  if (liveAnsweredThisQ) return; // ya confirmada: no se puede cambiar
+  livePendingIdx = selectedIdx;
+  const buttons = el("live-options-container").querySelectorAll(".option");
+  buttons.forEach((b, i) => b.classList.toggle("selected-pending", i === selectedIdx));
+  const nextBtn = el("live-next-btn");
+  nextBtn.disabled = false;
+  nextBtn.textContent = "Confirmar respuesta";
+}
+
+async function confirmLiveAnswer(idx, selectedIdx) {
+  liveAnsweredThisQ = true;
+  const buttons = el("live-options-container").querySelectorAll(".option");
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    b.classList.toggle("selected-pending", i === selectedIdx); // No revelamos si es correcta durante Live
+  });
+  const nextBtn = el("live-next-btn");
+  nextBtn.disabled = true; // evita doble clic mientras se guarda
+  nextBtn.textContent = "Guardando...";
+
+  const q = liveSessionQuestions[idx];
+  const correct = selectedIdx === q.correct;
+  liveMyAnswers[idx] = { qNum: q.qNum, selectedIdx, correct };
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":participant:" + currentUser.email, true);
+    const p = JSON.parse(r.value);
+    p.answers = liveMyAnswers.slice(); // reescribe completo: autocorrige cualquier guardado anterior que haya fallado
+    p.lastSeen = Date.now();
+    await window.storage.set("live:" + currentLiveCode + ":participant:" + currentUser.email, JSON.stringify(p), true);
+  } catch (e) {
+    // Si falla el guardado remoto (ej. sin conexión), la respuesta ya vive en liveMyAnswers
+    // y se reintentará en la siguiente confirmación o al ver resultados.
+  }
+  nextBtn.disabled = false;
+  nextBtn.textContent = (idx === liveSessionQuestions.length - 1) ? "Finalizar" : "Siguiente";
+}
+
+el("live-next-btn").onclick = async () => {
+  if (!liveAnsweredThisQ) {
+    if (livePendingIdx === null) return;
+    await confirmLiveAnswer(liveCurrentQIndex, livePendingIdx);
+    return;
+  }
+  if (liveCurrentQIndex >= liveSessionQuestions.length - 1) {
+    stopLiveQuizPolling();
+    showLiveResults();
+    return;
+  }
+  liveCurrentQIndex++;
+  liveAnsweredThisQ = !!liveMyAnswers[liveCurrentQIndex];
+  renderLiveQuestion(liveCurrentQIndex);
+};
+
+async function showLiveResults() {
+  hideLiveSessionTimer();
+  clearActiveLiveSession();
+  // Usamos SIEMPRE la copia en memoria (liveMyAnswers), nunca una relectura de la base de datos:
+  // si la conexión estaba lenta justo al confirmar la última pregunta, una relectura podía llegar
+  // antes de que el guardado terminara y mostrar esa pregunta como "sin responder" por error.
+  const p = { answers: liveMyAnswers };
+  const total = liveSessionQuestions.length;
+  let correctCount = 0;
+  const review = el("live-answer-review");
+  review.innerHTML = "";
+  liveSessionQuestions.forEach((q, i) => {
+    const ans = p.answers[i];
+    const gotCorrect = ans && ans.correct;
+    if (gotCorrect) correctCount++;
+    const box = document.createElement("div");
+    box.className = "feedback " + (gotCorrect ? "correct" : "wrong");
+    let html = '<div class="feedback-title">Pregunta ' + (i + 1) + ' (Q' + q.qNum + ') &middot; ' + (gotCorrect ? "Correcta" : "Incorrecta") + '</div>';
+    html += '<div style="font-size:14px; margin-bottom:8px;">' + q.question + '</div>';
+    if (!gotCorrect) {
+      html += '<div class="compare-row">';
+      html += '<div class="compare-box mine"><div class="compare-label">Tu respuesta</div>' + (ans ? String.fromCharCode(65 + ans.selectedIdx) + ') ' + q.options[ans.selectedIdx] : 'Sin responder') + '</div>';
+      html += '<div class="compare-box correctone"><div class="compare-label">Respuesta correcta</div>' + String.fromCharCode(65 + q.correct) + ') ' + q.options[q.correct] + '</div>';
+      html += '</div>';
+    }
+    html += '<div class="explanation">' + q.why + '</div>';
+    box.innerHTML = html;
+    review.appendChild(box);
+  });
+  const pct = Math.round((correctCount / total) * 100);
+  el("live-final-score").textContent = correctCount + " / " + total;
+  const passed = pct >= PASS_PCT;
+  el("live-grade-badge-container").innerHTML = '<div class="grade-badge ' + (passed ? "pass" : "fail") + '">' + pct + '% \u2014 ' + (passed ? "PASS" : "FAIL") + '</div>';
+  showScreen("screen-live-results");
+  lastLiveResult = { code: currentLiveCode, name: currentUser.name, answers: p.answers, correctCount, total, pct, questions: liveSessionQuestions.slice() };
+
+  if (STORAGE_AVAILABLE && currentUser.email) {
+    const ts = Date.now();
+    const entry = {
+      tipo: "Live", modulo: null, timestamp: ts, total: total,
+      correctas: correctCount, incorrectas: total - correctCount, pct: pct
+    };
+    try { await window.storage.set("history:" + currentUser.email + ":" + ts, JSON.stringify(entry), false); } catch (e) {}
+  }
+}
+
+el("live-back-to-menu-btn").onclick = () => {
+  hideLiveSessionTimer();
+  currentLiveCode = null;
+  showScreen("screen-menu");
+};
+
+// ---- PDF de resultados Live (individual) ----
+function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessionQuestions) {
+  if (!window.jspdf) { alert("PDF library didn't load \u2014 check your internet connection and try again."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const passed = pct >= PASS_PCT;
+  let y = 20;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(217, 119, 87);
+  doc.text("CCA-F Live Session Report", 20, y); y += 10;
+  doc.setFontSize(11); doc.setTextColor(90, 90, 90);
+  doc.text("Participante: " + name + "   |   Código de sesión: " + code + "   |   Fecha: " + new Date().toLocaleDateString(), 20, y); y += 14;
+  doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(30, 30, 30);
+  doc.text("Puntaje: " + correctCount + " / " + total + "  (" + pct + "%)", 20, y); y += 9;
+  doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
+  doc.text(passed ? "PASS" : "FAIL", 20, y);
+  doc.setFontSize(10); doc.setTextColor(120, 120, 120);
+  doc.text("(corte real del examen: 72%)", 45, y); y += 14;
+  doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
+
+  sessionQuestions.forEach((q, i) => {
+    const ans = answers[i];
+    const gotCorrect = ans && ans.correct;
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+    doc.setTextColor(gotCorrect ? 30 : 200, gotCorrect ? 140 : 60, gotCorrect ? 80 : 50);
+    doc.text("Q" + q.qNum + " \u2014 " + (gotCorrect ? "Correcta" : "Incorrecta"), 20, y); y += 6;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(40, 40, 40);
+    const qLines = doc.splitTextToSize(q.question, 170);
+    doc.text(qLines, 20, y); y += qLines.length * 5 + 2;
+    if (!gotCorrect) {
+      doc.setTextColor(90, 90, 90);
+      const yourAns = ans ? String.fromCharCode(65 + ans.selectedIdx) + ") " + q.options[ans.selectedIdx] : "Sin responder";
+      const yourLines = doc.splitTextToSize("Tu respuesta: " + yourAns, 170);
+      doc.text(yourLines, 20, y); y += yourLines.length * 5 + 2;
+      const correctLines = doc.splitTextToSize("Correcta: " + String.fromCharCode(65 + q.correct) + ") " + q.options[q.correct], 170);
+      doc.text(correctLines, 20, y); y += correctLines.length * 5 + 2;
+    }
+    doc.setFontSize(9); doc.setTextColor(120, 120, 120);
+    const whyLines = doc.splitTextToSize(q.why, 170);
+    doc.text(whyLines, 20, y); y += whyLines.length * 4.5 + 8;
+  });
+
+  doc.save("CCA-F_Live_" + code + "_" + name.replace(/[^a-z0-9]/gi, "_") + ".pdf");
+}
+
+el("live-pdf-btn").onclick = () => {
+  if (!lastLiveResult) return;
+  generateLivePdfFor(lastLiveResult.name, lastLiveResult.code, lastLiveResult.answers, lastLiveResult.correctCount, lastLiveResult.total, lastLiveResult.pct, lastLiveResult.questions);
+};
+
+// ---- PDF de resultados Live (grupal, Admin) ----
+el("admin-download-all-pdf-btn").onclick = async () => {
+  if (!window.jspdf || !currentLiveCode) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let meta;
+  try {
+    const r = await window.storage.get("live:" + currentLiveCode + ":meta", true);
+    meta = JSON.parse(r.value);
+  } catch (e) { meta = null; }
+  const order = (meta && meta.questionOrder && meta.questionOrder.length) ? meta.questionOrder : LIVE_QUESTIONS.map((q, i) => i);
+  const sessionQuestions = order.map(i => LIVE_QUESTIONS[i]);
+  const total = sessionQuestions.length;
+
+  let names = [];
+  const participants = [];
+  try {
+    const list = await window.storage.list("live:" + currentLiveCode + ":participant:", true);
+    names = (list && list.keys) ? list.keys.map(k => k.split(":participant:")[1]) : [];
+    for (const n of names) {
+      try {
+        const pr = await window.storage.get("live:" + currentLiveCode + ":participant:" + n, true);
+        if (pr && pr.value) participants.push(JSON.parse(pr.value));
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  participants.forEach(p => {
+    p.correctCount = p.answers.filter(a => a && a.correct).length;
+    p.pct = Math.round((p.correctCount / total) * 100);
+  });
+  participants.sort((a, b) => b.pct - a.pct);
+
+  let y = 20;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(217, 119, 87);
+  doc.text("CCA-F Live Session \u2014 Resultados del grupo", 20, y); y += 10;
+  doc.setFontSize(11); doc.setTextColor(90, 90, 90);
+  doc.text("Código de sesión: " + currentLiveCode + "   |   Fecha: " + new Date().toLocaleDateString() + "   |   Participantes: " + participants.length, 20, y); y += 14;
+  doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 10;
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(30, 30, 30);
+  doc.text("Ranking", 20, y); y += 8;
+  doc.setFontSize(10);
+  participants.forEach((p, i) => {
+    if (y > 275) { doc.addPage(); y = 20; }
+    const passed = p.pct >= PASS_PCT;
+    doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
+    doc.text((i + 1) + ". " + p.name, 22, y);
+    doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
+    doc.text(p.correctCount + " / " + total + "  (" + p.pct + "%)  " + (passed ? "PASS" : "FAIL"), 120, y);
+    y += 7;
+  });
+
+  participants.forEach(p => {
+    doc.addPage(); y = 20;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(217, 119, 87);
+    doc.text(p.name + " \u2014 detalle", 20, y); y += 10;
+    doc.setFontSize(11); doc.setTextColor(30, 30, 30);
+    doc.text("Puntaje: " + p.correctCount + " / " + total + " (" + p.pct + "%)", 20, y); y += 10;
+    sessionQuestions.forEach((q, i) => {
+      const ans = p.answers[i];
+      const gotCorrect = ans && ans.correct;
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      doc.setTextColor(gotCorrect ? 30 : 200, gotCorrect ? 140 : 60, gotCorrect ? 80 : 50);
+      doc.text("Q" + q.qNum + " \u2014 " + (gotCorrect ? "Correcta" : (ans ? "Incorrecta" : "Sin responder")), 20, y); y += 6;
+    });
+  });
+
+  doc.save("CCA-F_Live_" + currentLiveCode + "_Grupal.pdf");
+};
+
+// ================= Modo sin conexión: pausa y reanuda =================
+let offlinePauseBeganAt = null;
+
+function handleOffline() {
+  if (offlinePauseBeganAt) return;
+  offlinePauseBeganAt = Date.now();
+  el("offline-banner").classList.add("showing");
+  stopExamTimer();
+  stopLiveQuizPolling();
+}
+
+function handleOnline() {
+  if (!offlinePauseBeganAt) return;
+  const pausedMs = Date.now() - offlinePauseBeganAt;
+  offlinePauseBeganAt = null;
+  el("offline-banner").classList.remove("showing");
+
+  const examActive = !el("screen-quiz").classList.contains("hidden") && examTimeRemaining > 0;
+  if (examActive) {
+    beginExamCountdownInterval();
+  }
+
+  const liveActive = !el("screen-live-quiz").classList.contains("hidden") && liveMyStartTime;
+  if (liveActive) {
+    liveMyStartTime += pausedMs; // el tiempo offline no cuenta contra el participante
+    tickLivePersonalTimer();
+    liveQuizInterval = setInterval(tickLivePersonalTimer, 1000);
+  }
+}
+
+window.addEventListener("offline", handleOffline);
+window.addEventListener("online", handleOnline);
+if (!navigator.onLine) handleOffline();
+
+// ================= Arranque de la app: retomar sesión guardada =================
+async function initApp() {
+  if (!configAlreadySaved) { showScreen("screen-firebase-config"); return; }
+
+  const savedUser = loadUserFromLocalStorage();
+  if (!savedUser || !savedUser.email) { showScreen("screen-register"); return; }
+
+  currentUser = savedUser;
+  renderMenu();
+
+  // ¿Había una Sesión en Vivo en curso?
+  let activeLive = null;
+  try { activeLive = JSON.parse(localStorage.getItem(LS_KEY_ACTIVE_LIVE) || "null"); } catch (e) {}
+  if (activeLive && activeLive.code && activeLive.email === currentUser.email && STORAGE_AVAILABLE) {
+    try {
+      const r = await window.storage.get("live:" + activeLive.code + ":meta", true);
+      const meta = JSON.parse(r.value);
+      if (meta.status === "running") {
+        currentLiveCode = activeLive.code;
+        enterLiveQuiz();
+        return;
+      } else if (meta.status === "waiting") {
+        currentLiveCode = activeLive.code;
+        el("wait-live-code").textContent = activeLive.code;
+        showScreen("screen-live-wait");
+        stopLiveWaitPolling();
+        liveWaitInterval = setInterval(checkLiveSessionStarted, 2000);
+        return;
+      } else {
+        clearActiveLiveSession();
+      }
+    } catch (e) { clearActiveLiveSession(); }
+  }
+
+  // ¿Había un examen general o de módulo a medias?
+  let savedQuiz = null;
+  try { savedQuiz = JSON.parse(localStorage.getItem(LS_KEY_QUIZ_STATE) || "null"); } catch (e) {}
+  if (savedQuiz && savedQuiz.email === currentUser.email && Array.isArray(savedQuiz.quizQuestions) && savedQuiz.quizQuestions.length) {
+    quizMode = savedQuiz.quizMode;
+    quizModuleCode = savedQuiz.quizModuleCode;
+    quizModuleName = savedQuiz.quizModuleName;
+    quizQuestions = savedQuiz.quizQuestions;
+    currentIndex = Math.min(savedQuiz.currentIndex || 0, quizQuestions.length - 1);
+    userScore = savedQuiz.userScore || 0;
+    quizUserAnswers = savedQuiz.quizUserAnswers || [];
+    perDomainScore = savedQuiz.perDomainScore || {};
+    userName = savedQuiz.userName || currentUser.name;
+    sessionKey = savedQuiz.sessionKey || "";
+    examTimeRemaining = savedQuiz.examTimeRemaining || 0;
+
+    showScreen("screen-quiz");
+    el("question-nav-panel").classList.add("hidden");
+    el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
+    if (quizMode === "general" && examTimeRemaining > 0) {
+      el("exam-timer-label").classList.remove("hidden");
+      updateExamTimerLabel();
+      beginExamCountdownInterval();
+    } else {
+      el("exam-timer-label").classList.add("hidden");
+    }
+    renderQuestion();
+    return;
+  }
+
+  showScreen("screen-menu");
+}
+
+initApp();
+</script>
+
+
+</body></html>
