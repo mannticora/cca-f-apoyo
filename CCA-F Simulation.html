@@ -33,6 +33,8 @@
     --d3: #9B6BFF;
     --d4: #F5A623;
     --d5: #FB7185;
+    --font-title: Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
   html[data-theme="light"] {
     --accent: #C05F3C;
@@ -91,17 +93,19 @@
   .live-session-timer .live-dot { margin: 0; }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-body);
     background: var(--bg-page);
     color: var(--black);
     max-width: 780px;
     margin: 0 auto;
     padding: 24px 20px 60px;
-    line-height: 1.55;
+    line-height: 1.65;
+    font-size: 15px;
+    letter-spacing: 0.1px;
   }
-  h1 { font-size: 26px; color: var(--accent); margin: 0 0 20px; }
-  h2 { font-size: 20px; color: var(--accent); margin: 0 0 14px; }
-  .subtitle { color: var(--grey); font-size: 14px; margin: 0 0 28px; font-style: italic; }
+  h1 { font-family: var(--font-title); font-weight: 600; font-size: 30px; letter-spacing: -0.2px; color: var(--accent); margin: 0 0 20px; }
+  h2 { font-family: var(--font-title); font-weight: 600; font-size: 22px; letter-spacing: -0.1px; color: var(--accent); margin: 0 0 14px; }
+  .subtitle { color: var(--grey); font-size: 14px; line-height: 1.6; margin: 0 0 28px; font-style: normal; }
   .card {
     background: var(--bg-card2);
     border: 1px solid var(--border);
@@ -363,45 +367,81 @@
     border-bottom: 1px solid var(--border);
   }
   .menu-intro strong { color: var(--black); }
-  .menu-grid { display: flex; flex-direction: column; gap: 12px; }
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 520px) {
+    .menu-grid { grid-template-columns: 1fr; }
+  }
   .menu-card {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    align-items: flex-start;
     width: 100%;
     text-align: left;
     background: var(--bg-card2);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 18px;
+    border-radius: 16px;
+    padding: 20px;
     cursor: pointer;
     font-family: inherit;
     color: var(--black);
-    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   }
+  .menu-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+  .menu-card:hover:not(:disabled)::before { transform: scaleX(1); }
   .menu-card:hover:not(:disabled) {
-    border-color: var(--accent);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: var(--card-accent, var(--accent));
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--card-accent, var(--accent)) 18%, transparent);
   }
+  .menu-card:active:not(:disabled) { transform: translateY(-1px); }
   .menu-card:disabled { opacity: 0.45; cursor: not-allowed; }
+  .menu-card-wide { grid-column: 1 / -1; }
   .menu-card-icon {
     flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 21px;
+    font-size: 22px;
     border-radius: 12px;
     background: color-mix(in srgb, var(--card-accent, var(--accent)) 20%, transparent);
+    margin-bottom: 14px;
+    transition: transform 0.18s ease;
   }
-  .menu-card-body { flex: 1; min-width: 0; }
-  .menu-card-title { font-size: 16px; font-weight: bold; margin-bottom: 3px; }
+  .menu-card:hover:not(:disabled) .menu-card-icon { transform: scale(1.08); }
+  .menu-card-body { width: 100%; }
+  .menu-card-title { font-family: var(--font-title); font-size: 17px; font-weight: 600; letter-spacing: -0.1px; margin-bottom: 6px; }
   .menu-card-desc { font-size: 13px; color: var(--grey); line-height: 1.5; }
   .menu-card-soon { display: inline-block; font-size: 11px; color: var(--grey); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px; margin-left: 8px; }
-  .menu-card-arrow { flex: 0 0 auto; font-size: 22px; color: var(--grey); line-height: 1; }
-  .menu-card:hover:not(:disabled) .menu-card-arrow { color: var(--accent); }
+  .menu-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--card-accent, var(--accent));
+    margin-top: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .menu-card-meta::after { content: "→"; display: inline-block; transition: transform 0.18s ease; }
+  .menu-card:hover:not(:disabled) .menu-card-meta::after { transform: translateX(3px); }
   .history-item {
     background: var(--bg-card2);
     border: 1px solid var(--border);
@@ -491,40 +531,40 @@
       <div class="menu-card-body">
         <div class="menu-card-title">Examen asíncrono</div>
         <div class="menu-card-desc">25 preguntas mezcladas de los 5 dominios, con retroalimentación inmediata después de cada respuesta.</div>
+        <div class="menu-card-meta">Comenzar examen</div>
       </div>
-      <div class="menu-card-arrow">›</div>
     </button>
     <button class="menu-card" id="menu-modules-btn">
       <div class="menu-card-icon" style="--card-accent:var(--d2)">🎯</div>
       <div class="menu-card-body">
         <div class="menu-card-title">Módulos por dominio</div>
         <div class="menu-card-desc">Practica un dominio a la vez (D1–D5), con tu propio historial y progreso por módulo.</div>
+        <div class="menu-card-meta">Elegir dominio</div>
       </div>
-      <div class="menu-card-arrow">›</div>
     </button>
     <button class="menu-card" id="menu-live-btn">
       <div class="menu-card-icon" style="--card-accent:var(--d3)">🔴</div>
       <div class="menu-card-body">
         <div class="menu-card-title">Sesión en vivo</div>
         <div class="menu-card-desc">Únete con el código que te dé tu Admin. Cada quien avanza a su propio ritmo, sin ver respuestas hasta el final.</div>
+        <div class="menu-card-meta">Unirme con código</div>
       </div>
-      <div class="menu-card-arrow">›</div>
     </button>
     <button class="menu-card" id="menu-history-btn">
       <div class="menu-card-icon" style="--card-accent:var(--d4)">📊</div>
       <div class="menu-card-body">
         <div class="menu-card-title">Mi historial</div>
         <div class="menu-card-desc">Consulta tus intentos anteriores, puntaje y progreso a lo largo del tiempo.</div>
+        <div class="menu-card-meta">Ver progreso</div>
       </div>
-      <div class="menu-card-arrow">›</div>
     </button>
-    <button class="menu-card" id="menu-admin-panel-btn">
+    <button class="menu-card menu-card-wide" id="menu-admin-panel-btn">
       <div class="menu-card-icon" style="--card-accent:var(--d5)">⚙️</div>
       <div class="menu-card-body">
         <div class="menu-card-title">Panel Admin</div>
         <div class="menu-card-desc">Crea sesiones en vivo, monitorea al grupo en tiempo real y genera documentos de estudio descargables.</div>
+        <div class="menu-card-meta">Administrar</div>
       </div>
-      <div class="menu-card-arrow">›</div>
     </button>
   </div>
 </div>
