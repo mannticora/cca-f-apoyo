@@ -1,2 +1,3 @@
 *.download.tmp
 .wrangler/
+.dev.vars

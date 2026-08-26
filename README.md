@@ -42,4 +42,58 @@ Antes estuvo en Azure Static Web Apps, bajo una suscripción de estudiante compa
 
 ## Desarrollo local
 
-No requiere build. Basta con abrir `CCA-F Simulation.html` en un navegador (o servirlo con cualquier servidor estático) para probar cambios.
+No requiere build. Basta con abrir `CCA-F Simulation.html` directamente en un navegador (doble clic, o arrastrarlo a una pestaña) para probar cambios de UI/CSS/lógica del examen.
+
+Esto **no** incluye la función "Generar preguntas desde un PDF" — esa vive en `functions/api/generate-questions.js` y necesita el runtime de Cloudflare para responder. Para probarla localmente:
+
+```bash
+npm install -g wrangler
+echo "ANTHROPIC_API_KEY=sk-ant-tu-key-aqui" > .dev.vars
+wrangler pages dev . --compatibility-date=2026-01-01
+```
+
+Esto levanta el sitio completo (estático + función) en `http://localhost:8788`, usando la key que pongas en `.dev.vars` (ese archivo nunca se sube al repo — ya está en `.gitignore`... si no está, agrégalo antes de crear el archivo).
+
+## Clonar el repo y hacer cambios
+
+```bash
+git clone https://github.com/mannticora/cca-f-apoyo.git
+cd cca-f-apoyo
+```
+
+A partir de ahí, edita `CCA-F Simulation.html` directamente (es un solo archivo, sin build) y prueba localmente como se explica arriba.
+
+### Para contribuir al sitio en vivo (cca-f-apoyo.pages.dev)
+
+1. Pide acceso de colaborador al repositorio de GitHub (a quien administre `mannticora`).
+2. Haz tus cambios, commitea y sube tu rama / abre un Pull Request.
+3. El despliegue a Cloudflare Pages **es manual** (no hay CI/CD automático todavía) — quien tenga acceso al proyecto de Cloudflare corre:
+   ```bash
+   wrangler login   # o exportar CLOUDFLARE_API_TOKEN si no hay navegador disponible
+   wrangler pages deploy . --project-name=cca-f-apoyo
+   ```
+   Esto requiere ser colaborador del proyecto de Cloudflare (pídele acceso al dueño de la cuenta) o tener un `CLOUDFLARE_API_TOKEN` con permiso de Pages sobre esa cuenta.
+
+### Para desplegar tu propia copia independiente (fork)
+
+Si quieres tu propio sitio (no tocar el de producción), no necesitas acceso a nada existente:
+
+1. Haz fork del repo en GitHub, o clónalo y crea tu propio remoto.
+2. Crea tu cuenta gratis en [cloudflare.com](https://dash.cloudflare.com/sign-up) (sin tarjeta).
+3. ```bash
+   npm install -g wrangler
+   wrangler login
+   wrangler pages project create tu-nombre-de-proyecto
+   wrangler pages deploy . --project-name=tu-nombre-de-proyecto
+   wrangler pages secret put ANTHROPIC_API_KEY --project-name=tu-nombre-de-proyecto
+   ```
+   (la última pide que pegues tu propia API key de [console.anthropic.com](https://console.anthropic.com) — necesitas la tuya, la de este proyecto no es reutilizable).
+4. Tu sitio queda en `https://tu-nombre-de-proyecto.pages.dev`.
+5. **Opcional — Firebase propio**: por defecto la app usa el proyecto de Firebase de INMEGA (usuarios, historial y sesiones Live quedarían mezclados con los del sitio original). Si quieres datos completamente aislados, crea tu propio proyecto en [Firebase Console](https://console.firebase.google.com), y reemplaza el objeto `HARDCODED_FIREBASE_CONFIG` dentro de `CCA-F Simulation.html` (buscar ese nombre en el archivo) con la config de tu proyecto.
+
+## Requisitos
+
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/) (para `npm install -g wrangler`)
+- Una cuenta gratuita de [Cloudflare](https://dash.cloudflare.com/sign-up) (solo si vas a desplegar, no para editar/probar en local)
+- Una API key de [Anthropic](https://console.anthropic.com) (solo si vas a usar/desplegar la función de generar preguntas desde PDF)
