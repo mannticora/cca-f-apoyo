@@ -2,7 +2,9 @@
 
 Simulador de práctica para el examen **Claude Certified Architect (CCA-F)**, hecho para el curso de INMEGA. Es una app de una sola página HTML (sin build, sin backend propio) que usa Firebase Firestore como base de datos y jsPDF para exportar resultados y documentos.
 
-**En vivo:** https://purple-sand-0a77d3110.7.azurestaticapps.net
+**En vivo:** https://cca-f-apoyo.pages.dev
+
+*(Sitio anterior en Azure Static Web Apps, sin la función de generar preguntas desde PDF: https://purple-sand-0a77d3110.7.azurestaticapps.net — se quedó sin crédito de Azure for Students, ver sección "Despliegue".)*
 
 ## Qué hace
 
@@ -17,6 +19,7 @@ Simulador de práctica para el examen **Claude Certified Architect (CCA-F)**, he
 - **Crear sesión Live**: elige número de preguntas (5/10/15/20) y duración por persona; genera un código de sesión para compartir con el grupo. Cada participante avanza a su propio ritmo (no es sincronizado), sin ver si acertó hasta el final.
 - **Monitorear sesiones**: progreso en tiempo real de cada participante (aciertos, % completado, tiempo restante), con descarga de PDF grupal.
 - **Documento de estudio**: genera y descarga un documento (Markdown o PDF) con N preguntas (5 hasta "todas las disponibles") tomadas del banco completo, repartidas proporcionalmente entre los 5 dominios, incluyendo la respuesta correcta y su explicación — útil para imprimir o repasar offline.
+- **Generar preguntas desde un PDF**: sube un PDF (apuntes, guía, material del curso), el navegador extrae el texto con pdf.js, y una función serverless llama a la API de Anthropic (Claude) para generar preguntas nuevas en el mismo formato y nivel de dificultad del examen, listas para descargar en Markdown o PDF.
 
 ## Banco de preguntas
 
@@ -25,14 +28,17 @@ Un solo banco de **97 preguntas** repartido en los 5 dominios del examen (18 en 
 ## Cómo funciona técnicamente
 
 - **`CCA-F Simulation.html`** — toda la app: HTML, CSS y JavaScript en un solo archivo (sin frameworks, sin paso de build).
-- **`CCA-F Simulation_files/`** — dependencias vendored: Firebase (App + Firestore, versión compat) y jsPDF.
-- **`index.html`** — redirige a `CCA-F Simulation.html`, existe solo porque Azure Static Web Apps requiere un `index.html` en la raíz para desplegar.
-- **`staticwebapp.config.json`** — hace que la URL raíz del sitio sirva `CCA-F Simulation.html` directamente.
+- **`CCA-F Simulation_files/`** — dependencias vendored: Firebase (App + Firestore, versión compat), jsPDF, y pdf.js (extracción de texto de PDFs en el navegador).
+- **`index.html`** — redirige a `CCA-F Simulation.html`, existe solo porque los hosts de sitios estáticos esperan un `index.html` en la raíz.
+- **`functions/api/generate-questions.js`** — Cloudflare Pages Function (serverless): recibe el texto extraído de un PDF, llama a la API de Anthropic con la key guardada como secreto del lado del servidor (nunca en el código ni en el repo), y devuelve preguntas en formato estructurado.
+- **`staticwebapp.config.json`** — configuración específica de Azure Static Web Apps (host anterior, ver abajo); Cloudflare Pages no la usa.
 - **Firebase Firestore** — guarda usuarios, historial de intentos y el estado de las sesiones Live (código, participantes, progreso). La configuración de Firebase está hardcodeada en el HTML a propósito (es pública por diseño; la seguridad real vive en las reglas de Firestore del proyecto, no en ocultar esos valores).
 
 ## Despliegue
 
-Hospedado en **Azure Static Web Apps** (tier Free), bajo la suscripción de estudiante de Azure. El repo tiene un workflow de GitHub Actions (`.github/workflows/azure-static-web-apps-*.yml`) configurado para desplegar automáticamente en cada push a `main`, aunque actualmente no se está disparando por una restricción a nivel de cuenta de GitHub — mientras tanto, el despliegue se hace manualmente con `swa deploy` usando el token del recurso.
+Hospedado en **Cloudflare Pages** (plan Free, sin costo). Se despliega con `wrangler pages deploy` (incluye tanto el sitio estático como la función `functions/api/generate-questions.js`). La API key de Anthropic vive como secreto de Cloudflare (`wrangler pages secret put ANTHROPIC_API_KEY`), no en el repo.
+
+Antes estuvo en Azure Static Web Apps, bajo una suscripción de estudiante compartida con otro proyecto — cuando ese crédito se agotó, la función serverless de Azure quedó bloqueada (el sitio estático seguía funcionando, solo la función se caía). Por eso se migró todo a Cloudflare, que no depende de ningún crédito por tiempo limitado.
 
 ## Desarrollo local
 
