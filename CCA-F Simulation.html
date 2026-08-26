@@ -653,6 +653,9 @@
         <option value="20">20 preguntas</option>
       </select>
       <button class="primary" id="pdf-generate-btn" style="margin-top:14px;">Generar preguntas</button>
+      <div id="pdf-generate-progress-wrap" class="hidden" style="margin-top:14px;">
+        <div class="progress-bar" style="margin-bottom:0;"><div class="progress-fill" id="pdf-generate-progress-fill" style="width:0%;"></div></div>
+      </div>
       <div id="pdf-generate-status" style="font-size:13px; color:var(--grey); margin-top:10px;"></div>
       <div id="pdf-generate-results" class="hidden" style="margin-top:14px;">
         <div id="pdf-generate-summary" style="font-size:14px; font-weight:bold; margin-bottom:10px;"></div>
@@ -1626,37 +1629,63 @@ async function extractPdfText(file, onProgress) {
   return text.trim();
 }
 
+function setPdfProgress(pct) {
+  el("pdf-generate-progress-fill").style.width = Math.max(0, Math.min(100, pct)) + "%";
+}
+
 el("pdf-generate-btn").onclick = async () => {
   const fileInput = el("pdf-upload-input");
   const statusEl = el("pdf-generate-status");
   const resultsEl = el("pdf-generate-results");
+  const progressWrap = el("pdf-generate-progress-wrap");
   resultsEl.classList.add("hidden");
   statusEl.style.color = "var(--grey)";
+  progressWrap.classList.remove("hidden");
+  setPdfProgress(0);
 
   const file = fileInput.files && fileInput.files[0];
-  if (!file) { statusEl.textContent = "Primero elige un archivo PDF."; return; }
-  if (file.size > PDF_UPLOAD_MAX_BYTES) { statusEl.textContent = "El PDF pesa demasiado (máximo 50 MB)."; return; }
+  if (!file) { statusEl.textContent = "Primero elige un archivo PDF."; progressWrap.classList.add("hidden"); return; }
+  if (file.size > PDF_UPLOAD_MAX_BYTES) { statusEl.textContent = "El PDF pesa demasiado (máximo 50 MB)."; progressWrap.classList.add("hidden"); return; }
 
   const count = parseInt(el("pdf-question-count-select").value, 10) || 10;
   const btn = el("pdf-generate-btn");
   btn.disabled = true;
+  let simInterval = null;
 
   try {
-    statusEl.textContent = "Extrayendo texto del PDF…";
+    statusEl.textContent = "Extrayendo texto del PDF… 0%";
     const text = await extractPdfText(file, (page, total) => {
-      statusEl.textContent = "Extrayendo texto del PDF… página " + page + " de " + total;
+      const pct = Math.round((page / total) * 25);
+      setPdfProgress(pct);
+      statusEl.textContent = "Extrayendo texto del PDF… página " + page + " de " + total + " (" + pct + "%)";
     });
     if (text.length < 200) {
       statusEl.textContent = "No se pudo extraer suficiente texto de este PDF (¿está escaneado como imagen?).";
       return;
     }
 
-    statusEl.textContent = "Generando " + count + " preguntas con IA… esto puede tardar unos segundos.";
+    // La API no transmite progreso real, así que estimamos: sube suave hasta 92% mientras esperamos
+    // la respuesta (puede tomar más si el PDF tiene poco material y el servidor reintenta para
+    // completar el número exacto de preguntas), y salta a 100% en cuanto llega la respuesta real.
+    setPdfProgress(25);
+    const estimatedMs = Math.max(4000, count * 2800);
+    const startTime = performance.now();
+    simInterval = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      const simPct = Math.min(92, 25 + (elapsed / estimatedMs) * 67);
+      setPdfProgress(simPct);
+      statusEl.textContent = "Generando " + count + " preguntas con IA… " + Math.round(simPct) + "%";
+    }, 300);
+
     const resp = await fetch("/api/generate-questions", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text, count })
     });
+    clearInterval(simInterval);
+    simInterval = null;
+    setPdfProgress(97);
+
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
       statusEl.style.color = "var(--wrong)";
@@ -1669,6 +1698,8 @@ el("pdf-generate-btn").onclick = async () => {
       return;
     }
 
+    setPdfProgress(100);
+
     pdfGeneratedLabel = file.name.replace(/\.pdf$/i, "");
     pdfGeneratedQuestions = data.questions.map((q, i) => ({
       domainCode: "PDF", domainName: pdfGeneratedLabel,
@@ -1676,15 +1707,20 @@ el("pdf-generate-btn").onclick = async () => {
       source: "Generado con IA desde \"" + file.name + "\""
     }));
 
-    statusEl.style.color = "var(--correct)";
-    statusEl.textContent = "Listo: " + pdfGeneratedQuestions.length + " preguntas generadas" + (data.truncated ? " (el PDF era muy largo, se usó solo la primera parte)." : ".");
+    const gotAll = pdfGeneratedQuestions.length >= count;
+    statusEl.style.color = gotAll ? "var(--correct)" : "var(--wrong)";
+    statusEl.textContent = "Listo: " + pdfGeneratedQuestions.length + " de " + count + " preguntas generadas" +
+      (data.truncated ? " (el PDF era muy largo, se usó solo la primera parte)." : ".") +
+      (!gotAll ? " El material del PDF no dio para más sin repetirse." : "");
     el("pdf-generate-summary").textContent = pdfGeneratedQuestions.length + " preguntas generadas desde \"" + file.name + "\"";
     resultsEl.classList.remove("hidden");
   } catch (e) {
     statusEl.style.color = "var(--wrong)";
     statusEl.textContent = "Error al generar preguntas: " + e.message;
   } finally {
+    if (simInterval) clearInterval(simInterval);
     btn.disabled = false;
+    setTimeout(() => progressWrap.classList.add("hidden"), 600);
   }
 };
 
