@@ -421,7 +421,6 @@
     .admin-grid { grid-template-columns: 1fr; }
   }
   .admin-grid > .card { margin-top: 0; }
-  .admin-grid-wide { grid-column: 1 / -1; }
   .menu-card-icon {
     flex: 0 0 auto;
     width: 46px;
@@ -639,26 +638,6 @@
       <div style="font-size:12px; color:var(--grey); margin:10px 0 14px;">Genera un documento con preguntas de práctica de los 5 dominios (mezcladas y balanceadas), incluyendo la respuesta correcta y su explicación.</div>
       <button class="primary" id="doc-download-md-btn">Descargar Markdown (.md)</button>
       <button class="secondary" id="doc-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
-    </div>
-
-    <div class="card admin-grid-wide">
-      <div class="pill">Generar preguntas desde un PDF</div>
-      <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Sube un PDF (apuntes, guía, material del curso) y una IA genera preguntas de práctica en el mismo formato del examen, basadas solo en ese documento.</div>
-      <input type="file" id="pdf-upload-input" accept="application/pdf">
-      <div style="margin:14px 0 8px; font-weight:bold;">Número de preguntas</div>
-      <select id="pdf-question-count-select">
-        <option value="5">5 preguntas</option>
-        <option value="10" selected="">10 preguntas</option>
-        <option value="15">15 preguntas</option>
-        <option value="20">20 preguntas</option>
-      </select>
-      <button class="primary" id="pdf-generate-btn" style="margin-top:14px;">Generar preguntas</button>
-      <div id="pdf-generate-status" style="font-size:13px; color:var(--grey); margin-top:10px;"></div>
-      <div id="pdf-generate-results" class="hidden" style="margin-top:14px;">
-        <div id="pdf-generate-summary" style="font-size:14px; font-weight:bold; margin-bottom:10px;"></div>
-        <button class="primary" id="pdf-download-md-btn">Descargar Markdown (.md)</button>
-        <button class="secondary" id="pdf-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
-      </div>
     </div>
 
     <div class="card">
@@ -1599,102 +1578,6 @@ el("doc-download-md-btn").onclick = () => {
 el("doc-download-pdf-btn").onclick = () => {
   const qs = getSelectedDocQuestions();
   buildStudyPdf(qs);
-};
-
-// ---- Generar preguntas desde un PDF (Admin) ----
-const PDF_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
-let pdfGeneratedQuestions = [];
-let pdfGeneratedLabel = "";
-
-const PDF_EXTRACT_TEXT_CAP = 65000; // un poco más que el límite del servidor (60000), para no cortar de menos
-
-async function extractPdfText(file, onProgress) {
-  const pdfjsLib = await import("./CCA-F Simulation_files/pdf.mjs");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "./CCA-F Simulation_files/pdf.worker.mjs";
-  const buf = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-  let text = "";
-  for (let i = 1; i <= doc.numPages; i++) {
-    if (onProgress) onProgress(i, doc.numPages);
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(it => it.str).join(" ") + "\n\n";
-    // Corta antes si ya alcanzamos suficiente texto — evita procesar cientos de páginas de más
-    // en documentos grandes cuando el servidor solo va a usar los primeros ~60,000 caracteres.
-    if (text.length >= PDF_EXTRACT_TEXT_CAP) break;
-  }
-  return text.trim();
-}
-
-el("pdf-generate-btn").onclick = async () => {
-  const fileInput = el("pdf-upload-input");
-  const statusEl = el("pdf-generate-status");
-  const resultsEl = el("pdf-generate-results");
-  resultsEl.classList.add("hidden");
-  statusEl.style.color = "var(--grey)";
-
-  const file = fileInput.files && fileInput.files[0];
-  if (!file) { statusEl.textContent = "Primero elige un archivo PDF."; return; }
-  if (file.size > PDF_UPLOAD_MAX_BYTES) { statusEl.textContent = "El PDF pesa demasiado (máximo 50 MB)."; return; }
-
-  const count = parseInt(el("pdf-question-count-select").value, 10) || 10;
-  const btn = el("pdf-generate-btn");
-  btn.disabled = true;
-
-  try {
-    statusEl.textContent = "Extrayendo texto del PDF…";
-    const text = await extractPdfText(file, (page, total) => {
-      statusEl.textContent = "Extrayendo texto del PDF… página " + page + " de " + total;
-    });
-    if (text.length < 200) {
-      statusEl.textContent = "No se pudo extraer suficiente texto de este PDF (¿está escaneado como imagen?).";
-      return;
-    }
-
-    statusEl.textContent = "Generando " + count + " preguntas con IA… esto puede tardar unos segundos.";
-    const resp = await fetch("/api/generate-questions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text, count })
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      statusEl.style.color = "var(--wrong)";
-      statusEl.textContent = data.error || ("Error del servidor (" + resp.status + ").");
-      return;
-    }
-    if (!data.questions || !data.questions.length) {
-      statusEl.style.color = "var(--wrong)";
-      statusEl.textContent = "El modelo no devolvió preguntas utilizables. Intenta con otro PDF.";
-      return;
-    }
-
-    pdfGeneratedLabel = file.name.replace(/\.pdf$/i, "");
-    pdfGeneratedQuestions = data.questions.map((q, i) => ({
-      domainCode: "PDF", domainName: pdfGeneratedLabel,
-      scenario: q.scenario || "", question: q.question, options: q.options, correct: q.correct, why: q.why,
-      source: "Generado con IA desde \"" + file.name + "\""
-    }));
-
-    statusEl.style.color = "var(--correct)";
-    statusEl.textContent = "Listo: " + pdfGeneratedQuestions.length + " preguntas generadas" + (data.truncated ? " (el PDF era muy largo, se usó solo la primera parte)." : ".");
-    el("pdf-generate-summary").textContent = pdfGeneratedQuestions.length + " preguntas generadas desde \"" + file.name + "\"";
-    resultsEl.classList.remove("hidden");
-  } catch (e) {
-    statusEl.style.color = "var(--wrong)";
-    statusEl.textContent = "Error al generar preguntas: " + e.message;
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-el("pdf-download-md-btn").onclick = () => {
-  if (!pdfGeneratedQuestions.length) return;
-  downloadTextFile("CCA-F_" + pdfGeneratedLabel.replace(/[^a-z0-9]/gi, "_") + ".md", buildStudyMarkdown(pdfGeneratedQuestions), "text/markdown");
-};
-el("pdf-download-pdf-btn").onclick = () => {
-  if (!pdfGeneratedQuestions.length) return;
-  buildStudyPdf(pdfGeneratedQuestions);
 };
 
 const DOMAIN_COLORS = { D1: "var(--d1)", D2: "var(--d2)", D3: "var(--d3)", D4: "var(--d4)", D5: "var(--d5)" };
