@@ -411,6 +411,17 @@
   .menu-card:active:not(:disabled) { transform: translateY(-1px); }
   .menu-card:disabled { opacity: 0.45; cursor: not-allowed; }
   .menu-card-wide { grid-column: 1 / -1; }
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 520px) {
+    .admin-grid { grid-template-columns: 1fr; }
+  }
+  .admin-grid > .card { margin-top: 0; }
+  .admin-grid-wide { grid-column: 1 / -1; }
   .menu-card-icon {
     flex: 0 0 auto;
     width: 46px;
@@ -588,64 +599,78 @@
 <div id="screen-admin-create" class="">
   <h2>Panel Admin</h2>
 
-  <div class="card">
-    <div class="pill">Crear nueva sesión</div>
-    <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
-    <select id="live-question-count-select">
-      <option value="5">5 preguntas</option>
-      <option value="10">10 preguntas</option>
-      <option value="15">15 preguntas</option>
-      <option value="20" selected="">20 preguntas</option>
-    </select>
-    <div style="margin:14px 0 8px; font-weight:bold;">Duración por persona</div>
-    <select id="live-duration-select">
-      <option value="10">10 minutos</option>
-      <option value="15">15 minutos</option>
-      <option value="20">20 minutos</option>
-      <option value="25" selected="">25 minutos</option>
-      <option value="30">30 minutos</option>
-      <option value="45">45 minutos</option>
-      <option value="60">60 minutos</option>
-    </select>
-    <div style="font-size:12px; color:var(--grey); margin-top:10px;">Cada participante avanza a su propio ritmo con su botón "Siguiente". El cronómetro empieza para cada quien en el momento en que entra a la sesión, no de forma sincronizada.</div>
-  </div>
-  <button class="primary" id="create-live-btn">Generar código y crear sesión</button>
+  <div class="admin-grid">
+    <div class="card">
+      <div class="pill">Crear nueva sesión</div>
+      <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
+      <select id="live-question-count-select">
+        <option value="5">5 preguntas</option>
+        <option value="10">10 preguntas</option>
+        <option value="15">15 preguntas</option>
+        <option value="20" selected="">20 preguntas</option>
+      </select>
+      <div style="margin:14px 0 8px; font-weight:bold;">Duración por persona</div>
+      <select id="live-duration-select">
+        <option value="10">10 minutos</option>
+        <option value="15">15 minutos</option>
+        <option value="20">20 minutos</option>
+        <option value="25" selected="">25 minutos</option>
+        <option value="30">30 minutos</option>
+        <option value="45">45 minutos</option>
+        <option value="60">60 minutos</option>
+      </select>
+      <div style="font-size:12px; color:var(--grey); margin:10px 0;">Cada participante avanza a su propio ritmo con su botón "Siguiente". El cronómetro empieza para cada quien en el momento en que entra a la sesión, no de forma sincronizada.</div>
+      <button class="primary" id="create-live-btn">Generar código y crear sesión</button>
+    </div>
 
-  <div class="card" style="margin-top:20px;">
-    <div class="pill">Documento de estudio</div>
-    <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
-    <select id="doc-question-count-select">
-      <option value="5">5 preguntas</option>
-      <option value="10">10 preguntas</option>
-      <option value="15">15 preguntas</option>
-      <option value="20" selected="">20 preguntas</option>
-      <option value="25">25 preguntas</option>
-      <option value="30">30 preguntas</option>
-      <option value="40">40 preguntas</option>
-      <option value="all">Todas las disponibles</option>
-    </select>
-    <div style="font-size:12px; color:var(--grey); margin:10px 0 14px;">Genera un documento con preguntas de práctica de los 5 dominios (mezcladas y balanceadas), incluyendo la respuesta correcta y su explicación.</div>
-    <button class="primary" id="doc-download-md-btn">Descargar Markdown (.md)</button>
-    <button class="secondary" id="doc-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
-  </div>
+    <div class="card">
+      <div class="pill">Documento de estudio</div>
+      <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
+      <select id="doc-question-count-select">
+        <option value="5">5 preguntas</option>
+        <option value="10">10 preguntas</option>
+        <option value="15">15 preguntas</option>
+        <option value="20" selected="">20 preguntas</option>
+        <option value="25">25 preguntas</option>
+        <option value="30">30 preguntas</option>
+        <option value="40">40 preguntas</option>
+        <option value="all">Todas las disponibles</option>
+      </select>
+      <div style="font-size:12px; color:var(--grey); margin:10px 0 14px;">Genera un documento con preguntas de práctica de los 5 dominios (mezcladas y balanceadas), incluyendo la respuesta correcta y su explicación.</div>
+      <button class="primary" id="doc-download-md-btn">Descargar Markdown (.md)</button>
+      <button class="secondary" id="doc-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
+    </div>
 
-  <div class="card" style="margin-top:20px;">
-    <div class="pill">Generar preguntas desde un PDF</div>
-    <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Sube un PDF (apuntes, guía, material del curso) y una IA genera preguntas de práctica en el mismo formato del examen, basadas solo en ese documento.</div>
-    <input type="file" id="pdf-upload-input" accept="application/pdf">
-    <div style="margin:14px 0 8px; font-weight:bold;">Número de preguntas</div>
-    <select id="pdf-question-count-select">
-      <option value="5">5 preguntas</option>
-      <option value="10" selected="">10 preguntas</option>
-      <option value="15">15 preguntas</option>
-      <option value="20">20 preguntas</option>
-    </select>
-    <button class="primary" id="pdf-generate-btn" style="margin-top:14px;">Generar preguntas</button>
-    <div id="pdf-generate-status" style="font-size:13px; color:var(--grey); margin-top:10px;"></div>
-    <div id="pdf-generate-results" class="hidden" style="margin-top:14px;">
-      <div id="pdf-generate-summary" style="font-size:14px; font-weight:bold; margin-bottom:10px;"></div>
-      <button class="primary" id="pdf-download-md-btn">Descargar Markdown (.md)</button>
-      <button class="secondary" id="pdf-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
+    <div class="card admin-grid-wide">
+      <div class="pill">Generar preguntas desde un PDF</div>
+      <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Sube un PDF (apuntes, guía, material del curso) y una IA genera preguntas de práctica en el mismo formato del examen, basadas solo en ese documento.</div>
+      <input type="file" id="pdf-upload-input" accept="application/pdf">
+      <div style="margin:14px 0 8px; font-weight:bold;">Número de preguntas</div>
+      <select id="pdf-question-count-select">
+        <option value="5">5 preguntas</option>
+        <option value="10" selected="">10 preguntas</option>
+        <option value="15">15 preguntas</option>
+        <option value="20">20 preguntas</option>
+      </select>
+      <button class="primary" id="pdf-generate-btn" style="margin-top:14px;">Generar preguntas</button>
+      <div id="pdf-generate-status" style="font-size:13px; color:var(--grey); margin-top:10px;"></div>
+      <div id="pdf-generate-results" class="hidden" style="margin-top:14px;">
+        <div id="pdf-generate-summary" style="font-size:14px; font-weight:bold; margin-bottom:10px;"></div>
+        <button class="primary" id="pdf-download-md-btn">Descargar Markdown (.md)</button>
+        <button class="secondary" id="pdf-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="pill">Monitorear otra sesión</div>
+      <div style="margin-bottom:8px; font-weight:bold;">¿Otro Admin ya creó una sesión?</div>
+      <input type="text" id="admin-watch-code-input" placeholder="Código de la sesión, ej. AB3K7">
+      <button class="secondary" id="admin-watch-code-btn" style="width:100%; margin-top:8px;">Monitorear esta sesión</button>
+    </div>
+
+    <div class="card">
+      <div class="pill">Sesiones recientes</div>
+      <div id="admin-recent-sessions-list" style="font-size:14px; color:var(--grey);"><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">UUHTP</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">W4KVM</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">P9HMN</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">H589T</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">HUY5A</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">YT4UP</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">K8WH8</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">7E5U7</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div></div>
     </div>
   </div>
 
@@ -671,18 +696,6 @@
       <tbody id="admin-monitor-body"></tbody>
     </table>
     <button class="primary" id="admin-download-all-pdf-btn" style="margin-top:16px;">Descargar PDF de todos los participantes</button>
-  </div>
-
-  <div class="card" style="margin-top:20px;">
-    <div class="pill">Monitorear otra sesión</div>
-    <div style="margin-bottom:8px; font-weight:bold;">¿Otro Admin ya creó una sesión?</div>
-    <input type="text" id="admin-watch-code-input" placeholder="Código de la sesión, ej. AB3K7">
-    <button class="secondary" id="admin-watch-code-btn" style="width:100%; margin-top:8px;">Monitorear esta sesión</button>
-  </div>
-
-  <div class="card">
-    <div class="pill">Sesiones recientes</div>
-    <div id="admin-recent-sessions-list" style="font-size:14px; color:var(--grey);"><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">UUHTP</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">W4KVM</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">P9HMN</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">H589T</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">HUY5A</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">YT4UP</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">K8WH8</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">7E5U7</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div></div>
   </div>
 
   <button class="secondary" id="back-from-admin-create-btn" style="width:100%; margin-top:14px;">Volver al menú</button>
