@@ -1,5 +1,8 @@
 {
   "navigationFallback": {
     "rewrite": "/CCA-F Simulation.html"
+  },
+  "mimeTypes": {
+    ".mjs": "text/javascript"
   }
 }
