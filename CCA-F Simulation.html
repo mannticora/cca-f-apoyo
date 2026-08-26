@@ -520,6 +520,24 @@
   </div>
   <button class="primary" id="create-live-btn">Generar código y crear sesión</button>
 
+  <div class="card" style="margin-top:20px;">
+    <div class="pill">Documento de estudio</div>
+    <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
+    <select id="doc-question-count-select">
+      <option value="5">5 preguntas</option>
+      <option value="10">10 preguntas</option>
+      <option value="15">15 preguntas</option>
+      <option value="20" selected="">20 preguntas</option>
+      <option value="25">25 preguntas</option>
+      <option value="30">30 preguntas</option>
+      <option value="40">40 preguntas</option>
+      <option value="all">Todas las disponibles</option>
+    </select>
+    <div style="font-size:12px; color:var(--grey); margin:10px 0 14px;">Genera un documento con preguntas de práctica de los 5 dominios (mezcladas y balanceadas), incluyendo la respuesta correcta y su explicación.</div>
+    <button class="primary" id="doc-download-md-btn">Descargar Markdown (.md)</button>
+    <button class="secondary" id="doc-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
+  </div>
+
   <div id="admin-created-wrap" class="hidden" style="margin-top:20px;">
     <div class="card" style="text-align:center;">
       <div class="pill">Código de sesión</div>
@@ -757,6 +775,699 @@ const LIVE_QUESTIONS = [
   { qNum: 19, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "Claude needs to update a configuration value that appears identically, byte-for-byte, in six different places within the same file, with no surrounding text that distinguishes one occurrence from another. What should Claude do, and why can't Edit handle this directly?", options: ["Use Edit six times, once per occurrence, since Edit is designed for exactly this.", "Read the full file, then use Write to replace its entire contents with the corrected version, since Edit requires a unique anchor and none exists here.", "Use Bash with a sed command, since this is a bulk text-replacement task.", "Use Glob to locate the six occurrences, then Edit each one individually by its line number."], correct: 1, why: "Why: Edit needs a unique surrounding anchor to know exactly which occurrence to change — when text is identical in multiple places with nothing distinguishing them, Edit cannot safely target just one. The documented fallback is Read the whole file, then Write it back in full with all corrected occurrences. Reaching for Bash to do this is the same antipattern the exam punishes elsewhere." },
   { qNum: 20, domainCode: "D3", domainName: "Claude Code Configuration & Workflows", question: "An MCP server exposes forty database tables through generic query tools, but has no way for Claude to know what tables or columns exist without first calling exploratory tools to discover the schema — which happens before nearly every single query, adding latency and repeating the same discovery work session after session. What change removes this repeated overhead most directly?", options: ["Expose the table catalogue and column schemas as MCP resources, giving Claude upfront visibility without needing to call anything to discover them.", "Instruct Claude in the system prompt to always call the discovery tool first and cache the result mentally for the rest of the session.", "Reduce the server to only the five most commonly queried tables, so there's less to discover.", "Enlarge the context window so previous discovery results are retained longer across turns."], correct: 0, why: "Why: MCP resources exist specifically to expose a catalogue up front, avoiding repeated exploratory calls. A prompt instruction still pays the discovery cost every session since it isn't a persistence mechanism; reducing table coverage loses functionality; enlarging the context window doesn't remove the discovery cost, it just makes stale results linger longer." }
 ];
+
+// ---- Banco de preguntas para el Documento de Estudio (Admin) ----
+const NEW_QUESTIONS_D1 = [
+  {
+    "scenario": "An agent building a research report calls a search tool and receives results back. The developer's loop code executes the tool call, then immediately sends the next request to Claude without adding the tool's output to the messages array. As a result, Claude asks the same question again and appears to hallucinate about data it never actually received.",
+    "question": "What is the root cause of this behavior, and how should it be fixed?",
+    "options": ["Claude's context window is too small for the task; increase it.", "The tool result was never appended to the conversation history before the next iteration, so Claude has no way to reason about what the tool returned; fix by appending the tool_result block before sending the next request.", "The tool silently failed and needs an automatic retry mechanism.", "The system prompt needs an explicit instruction telling Claude to \"remember tool outputs.\""],
+    "correct": 1,
+    "why": "Why: Tool results must be appended to conversation history before the next iteration — without this, Claude literally cannot see what the tool returned. A is an unrelated infrastructure fix that doesn't address the missing data. C assumes a failure that isn't evidenced by the scenario. D misunderstands how context works; a prompt instruction can't inject data that was never added to the conversation.",
+    "source": "Domain 1 — The Agentic Loop",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "A developer implements the agentic loop's stopping logic by checking whether content[0].type === \"text\" in Claude's API response. Whenever this is true, the code treats the turn as finished and stops calling tools.",
+    "question": "Why is this an unreliable stopping mechanism, and what should replace it?",
+    "options": ["It's fine as written — a text block in position 0 always means Claude has nothing more to do.", "Claude can return text alongside tool_use blocks in the same response, so this check can wrongly terminate mid-task; the loop should instead check stop_reason for \"tool_use\" versus \"end_turn\".", "The check should look at content.length instead of content[0].type.", "The check should wait for two consecutive text-only responses before stopping."],
+    "correct": 1,
+    "why": "Why: This is exactly the anti-pattern the guide calls out — Claude can return explanatory text alongside a tool_use block, so text-first content doesn't mean the turn is over. The only deterministic signal is stop_reason. C and D are still content-shape heuristics, not the reliable field-based check.",
+    "source": "Domain 1 — The Agentic Loop",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "A content team builds a workflow where a drafting agent writes a blog post, its output is passed to a fact-checking agent, whose output is passed to an SEO-optimization agent, whose output is passed to a formatting agent. Each stage has a distinct specialization, and each stage strictly consumes the immediately prior stage's output like stations on an assembly line.",
+    "question": "Which orchestration pattern best describes this workflow?",
+    "options": ["Sequential — generic steps where each just needs the prior step's result.", "Pipeline — an assembly line of differently-specialized stages where each stage's output becomes the next stage's input.", "Dynamic adaptive — because the number of stages could change based on content quality.", "Hub-and-spoke — because one central agent delegates to the others."],
+    "correct": 1,
+    "why": "Why: The defining trait here isn't just step-to-step dependency (which would be generic sequential) but distinctly specialized stages chained assembly-line style — that's the pipeline pattern. C is wrong because nothing in the scenario suggests runtime-determined decomposition. D is wrong because there's no central coordinator dispatching to specialists; the stages are chained directly.",
+    "source": "Domain 1 — Orchestration Patterns",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "A legal-tech company wants an agent to research case law for arbitrary, previously-unseen legal questions. The number of research steps, which databases to query, and how to break the question down cannot be known until the agent has examined the initial results.",
+    "question": "Which orchestration pattern is most appropriate for this use case?",
+    "options": ["Sequential — a fixed A → B → C chain decided in advance.", "Pipeline — fixed assembly-line stages defined at design time.", "Dynamic adaptive — the model decides task decomposition at runtime because complexity is unknown upfront.", "Parallel — fan out to every possible database at once regardless of relevance."],
+    "correct": 2,
+    "why": "Why: The decision rule is explicit: use dynamic adaptive orchestration when you cannot predict the decomposition at design time. A and B both assume a fixed structure that doesn't exist here. D wastes resources querying irrelevant sources and still doesn't address unknown decomposition.",
+    "source": "Domain 1 — Orchestration Patterns",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "An agent is asked to propose three different architectural approaches to a system design problem and compare their trade-offs. The team wants to explore each approach independently so that one approach's dead ends or wrong turns don't pollute the context being used to evaluate the others.",
+    "question": "Which error-recovery / context-management strategy best fits this need?",
+    "options": ["Retry with error feedback, applied sequentially to each approach.", "fork_session — branch into separate contexts for divergent exploration so each approach's dead ends don't pollute the others.", "Graceful degradation — return whichever approach happens to finish first.", "Fresh start with summary injection after each approach is attempted."],
+    "correct": 1,
+    "why": "Why: fork_session is specifically for divergent exploration — trying multiple approaches without polluting the main context. A is for transient tool failures, not exploratory branching. C sacrifices thoroughness the team explicitly wants. D is for recovering from staleness, not for parallel exploration.",
+    "source": "Domain 1 — Error Recovery & Resilience",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "Partway through a long debugging session, an agent starts repeating suggestions it already tried, contradicts something it said three turns earlier about the root cause, and appears to ignore the results of the most recent test-run tool call.",
+    "question": "What is the best fix according to the guidance on error recovery?",
+    "options": ["Paste the entire codebase into the conversation to give the agent more context.", "Recognize these as stale-context signals and start a fresh conversation seeded with a curated summary of the confirmed facts so far.", "Increase the iteration cap so the agent has more turns to self-correct.", "Switch to graceful degradation and accept whatever conclusion the agent currently holds as final."],
+    "correct": 1,
+    "why": "Why: Repetition, contradiction, and ignoring recent tool results are the named stale-context signals, and the fix is explicitly not \"more context\" — it's a fresh start with a curated summary. A is the wrong fix called out directly by the guide. C doesn't address staleness at all. D abandons the task despite there being no genuine partial result worth keeping.",
+    "source": "Domain 1 — Error Recovery & Resilience",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "An agent that autonomously triages log files sometimes gets stuck calling the same search tool with slightly reworded queries indefinitely, because the data it's looking for simply doesn't exist. The team wants to prevent this from running forever and racking up cost, while continuing to rely on stop_reason as the primary termination check.",
+    "question": "What is the correct role of an iteration cap in this design?",
+    "options": ["Replace stop_reason checking entirely with a fixed cap of, say, 10 iterations.", "Keep checking stop_reason as the primary termination signal, and add an iteration cap purely as a safety net to bound worst-case runaway cost or time.", "Remove iteration caps entirely, since stop_reason is deterministic and sufficient on its own.", "Use the iteration cap as the sole signal and ignore stop_reason to simplify the code."],
+    "correct": 1,
+    "why": "Why: Iteration caps are acceptable only as a safety net against runaway agents, never as the primary stopping mechanism — stop_reason remains primary. A and D make the cap primary, which either cuts off useful work or runs unnecessary iterations. C ignores the real risk of a genuinely stuck loop that never produces a natural end_turn.",
+    "source": "Domain 1 — The Agentic Loop",
+    "docKey": "loop"
+  },
+  {
+    "scenario": "A team wants two safeguards in their coding agent: (1) reject any database DELETE query that lacks a WHERE clause before it ever executes, and (2) automatically redact any social security numbers that appear in a tool's returned output before that output is shown to the user.",
+    "question": "Which hooks correctly implement requirements (1) and (2), respectively?",
+    "options": ["PostToolUse for both, since hooks always run after the tool executes.", "PreToolUse for (1), since it must block before execution; PostToolUse for (2), since it must inspect and sanitize the result after execution.", "PreToolUse for both, since hooks always run before the tool executes.", "A system prompt instruction for (1), and PreToolUse for (2)."],
+    "correct": 1,
+    "why": "Why: PreToolUse fires before the tool runs and is used to block dangerous calls or validate parameters (perfect for rejecting an unsafe DELETE before it executes); PostToolUse fires after and is used to validate/sanitize outputs (perfect for redacting SSNs already returned by the tool). A and C each misapply a single hook type to both requirements. D relies on a probabilistic system prompt for a hard pre-execution block, which isn't guaranteed to be followed.",
+    "source": "Domain 1 — Guardrails Hierarchy",
+    "docKey": "hooks"
+  },
+  {
+    "scenario": "A team is building an internal coding assistant. They want two behaviors: (a) the assistant should generally prefer concise responses and avoid unnecessary preamble, and (b) the assistant must never allow a git push --force to run against the main branch, no matter what the user says or how the request is phrased.",
+    "question": "What is the correct way to implement each behavior?",
+    "options": ["Both should be enforced with PreToolUse hooks, since hooks are always the safer choice regardless of stakes.", "(a) is fine as a system prompt style guideline since it's a soft preference; (b) requires a PreToolUse hook because it's a hard, must-never-happen constraint that needs deterministic, code-level enforcement.", "Both should be left as system prompt instructions, since they're both about the assistant's general behavior.", "(a) requires a hook because tone affects compliance perception; (b) can be a system prompt instruction since Claude reliably declines destructive commands."],
+    "correct": 1,
+    "why": "Why: System prompt rules are appropriate for style guidance and soft preferences (probabilistic is fine here); \"must never\" constraints on destructive operations require deterministic, code-level enforcement that can't be bypassed. A over-engineers a low-stakes preference. C under-protects a hard constraint. D inverts the correct mapping — style is the low-stakes case, force-push protection is the guaranteed-enforcement case.",
+    "source": "Domain 1 — Guardrails Hierarchy",
+    "docKey": "hooks"
+  },
+  {
+    "scenario": "A customer-support agent has a PreToolUse hook that blocks the issue_refund tool whenever the requested amount exceeds $500 and no manager-approval flag is present. A user attempts a prompt-injection attack, pasting a fake \"system override\" message into the chat that instructs Claude to ignore refund limits and process a $2,000 refund immediately.",
+    "question": "What happens when Claude attempts to call issue_refund for $2,000 without an approval flag?",
+    "options": ["The prompt injection succeeds, because Claude ultimately decides whether to call the tool.", "The PreToolUse hook still blocks the tool call, because it is a deterministic, code-level check that runs regardless of anything in the conversation and cannot be bypassed by prompt injection.", "The hook is bypassed, because the injected text modifies the tool's parameters before the hook can inspect them.", "The outcome depends on how convincingly the injected \"system override\" text is worded."],
+    "correct": 1,
+    "why": "Why: Hooks are programmatic and cannot be bypassed by prompt injection, regardless of how the conversation content is manipulated. A and D wrongly treat the model's compliance (probabilistic) as the deciding factor. C is false — the hook inspects the actual tool call parameters at execution time, not persuasive text in the chat.",
+    "source": "Domain 1 — Guardrails Hierarchy",
+    "docKey": "hooks"
+  },
+  {
+    "scenario": "A developer builds a coordinator agent meant to delegate research subtasks to a \"web-researcher\" subagent. The subagent's AgentDefinition is correctly configured with a scoped tools list, but when the coordinator runs, it fails with an error indicating it has no way to spawn the subagent at all.",
+    "question": "What is the most likely misconfiguration?",
+    "options": ["The subagent's AgentDefinition needs more than 5 tools to be useful.", "The coordinator's own allowedTools list doesn't include \"Task\" (or \"Agent\"), so it has no mechanism to delegate to any subagent.", "The subagent's system prompt needs to be removed so it inherits the coordinator's instead.", "Subagents can't be invoked by coordinators at all — only handoffs can transfer control."],
+    "correct": 1,
+    "why": "Why: The Task tool is what a coordinator uses to delegate; if \"Task\" (or \"Agent\") isn't in the coordinator's own allowedTools, it cannot spawn any subagent regardless of how well the subagent itself is configured. A contradicts the 4–5 tool scoping guidance. C and D misunderstand how subagent delegation and handoffs work.",
+    "source": "Domain 1 — Claude Agent SDK",
+    "docKey": "subagents"
+  },
+  {
+    "scenario": "An intake agent gathers 20 turns of conversation with a customer about a disputed charge, then hands off to a billing-specialist agent to resolve it. The billing agent's first response asks the customer to re-explain the issue from scratch, confusing the customer, who assumed the specialist already knew the details.",
+    "question": "What does this reveal, and how should the team fix it?",
+    "options": ["This is a bug — handoffs should automatically inherit the full conversation history by default.", "This is expected: the receiving agent does not inherit the sending agent's conversation history, so the intake agent must explicitly pass the relevant context (e.g., a summary of the dispute) as part of the handoff payload.", "The fix is to give both agents access to a shared memory store so no explicit passing is ever needed.", "The fix is to merge the two agents into a single agent so no handoff is required."],
+    "correct": 1,
+    "why": "Why: Handoffs transfer control between agents, but the receiving agent does not inherit the sending agent's conversation history — all context must be passed explicitly. A misstates how handoffs actually work. C contradicts the key constraint that subagents/agents don't share memory. D discards the benefits of specialization (focused tool sets, smaller context per agent) just to avoid doing explicit context passing correctly.",
+    "source": "Domain 1 — Claude Agent SDK",
+    "docKey": "subagents"
+  },
+  {
+    "scenario": "An agent handling account-closure requests is instructed to process routine closures automatically. A customer requests closure of a joint account where the two account holders have submitted conflicting instructions about how the remaining funds should be distributed, and no existing policy document covers this specific scenario.",
+    "question": "What should the agent do?",
+    "options": ["Make its best guess at a fair distribution and proceed with the closure so as not to delay the customer.", "Escalate to a human, since this is ambiguous intent that cannot be resolved with available context — one of the defined triggers for escalation.", "Close the account but leave the funds-distribution question unresolved, silently, and let a human notice later during an audit.", "Retry the request with error feedback, treating this as a transient failure."],
+    "correct": 1,
+    "why": "Why: Ambiguous intent that can't be resolved with available context is an explicit escalation trigger, alongside low confidence, policy exceptions, and destructive operations. A risks making a consequential financial decision the agent has no authority or clear basis for. C violates the key rule to never silently fail. D miscategorizes a genuine ambiguity as a transient tool error, which it isn't.",
+    "source": "Domain 1 — Human-in-the-Loop",
+    "docKey": "subagents"
+  }
+];
+const NEW_QUESTIONS_D2 = [
+  {
+    "scenario": "Your team's issue_refund tool only supports full refunds up to the original payment amount, but its one-line description just says \"Issues a refund to the customer.\" Support agents using Claude have started seeing it get called for partial-refund and store-credit requests it can't actually fulfill, causing downstream failures.",
+    "question": "What is the description missing that would most directly prevent this misuse?",
+    "options": ["A shorter, catchier tool name.", "An explicit boundary-condition statement — e.g., \"Only issues full refunds up to the original payment amount; does not support partial refunds or store credit\" — describing what the tool does NOT do.", "A required confirmation_code parameter.", "Consolidating issue_refund with two other billing tools into one combined tool."],
+    "correct": 1,
+    "why": "Why: Tool descriptions should state boundary conditions — what the tool does NOT do — so Claude doesn't reach for it outside its actual scope. A is wrong because the tool name isn't the primary selection signal. C adds friction unrelated to clarifying scope. D jumps to consolidation, but the exam sequence says fix the description before touching tool count.",
+    "source": "Domain 2 — Tool Description Design",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "An engineering team keeps adding new tools to their support agent as they roll out features. The agent is now up to 11 tools with well-written, detailed descriptions on each one, and Claude has started misselecting between overlapping tools on nearly a third of requests.",
+    "question": "Per the exam's schema design guidance, what is the most likely contributing factor and appropriate response?",
+    "options": ["The agent has too many tools; scope it down toward the recommended 4–5 per agent and only add more once selection accuracy is verified.", "Nothing is wrong structurally — just keep expanding the descriptions indefinitely.", "Switch every tool's tool_choice to \"any\" so Claude is forced to pick one on every turn.", "Rename all 11 tools with shorter names to speed up selection."],
+    "correct": 0,
+    "why": "Why: The exam caps agents at 4–5 tools, noting that more tools increase selection errors — and here, descriptions are already good, so tool count is the remaining lever. B ignores that the descriptions have already been optimized. C doesn't fix selection accuracy, it only forces a call every turn. D is wrong because tool name isn't the primary selection signal.",
+    "source": "Domain 2 — Schema Design",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "During a schema review, a teammate points out that the search_orders tool has parameters named email and range, while the rest of the codebase uses fully descriptive names.",
+    "question": "Which change best follows the exam's schema design rules for parameter naming?",
+    "options": ["Rename them to customer_email and order_date_range so the model has clearer signal about what each parameter expects.", "Mark both parameters as required so Claude is forced to fill them in.", "Delete the parameters and describe the expected filters only in the tool's free-text description.", "Rename the tool itself from search_orders to find_orders."],
+    "correct": 0,
+    "why": "Why: The exam explicitly calls out using descriptive parameter names — customer_email not email, order_date_range not range. B is unrelated to naming clarity and could add friction if the fields aren't truly mandatory. C throws away structured parameters Claude needs to populate reliably. D changes the tool name, not the vague parameter names, and name isn't the primary signal anyway.",
+    "source": "Domain 2 — Schema Design",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "A set_ticket_priority tool has a priority parameter typed as a freeform string. In practice, users mean one of four levels (low, medium, high, urgent), but Claude occasionally emits values like \"urgent!!\" or \"ASAP\" that break downstream logic.",
+    "question": "What schema change best addresses this?",
+    "options": ["Type priority as an enum restricted to low, medium, high, urgent.", "Keep priority as a freeform string but lengthen the tool description.", "Make priority optional with no default so Claude can skip it when unsure.", "Split set_ticket_priority into four separate tools, one per priority level."],
+    "correct": 0,
+    "why": "Why: The exam states enum types for constrained choices guide the model better than freeform strings. B doesn't constrain the actual values emitted. C sidesteps rather than solves the malformed-value problem, and priority is effectively mandatory here. D unnecessarily multiplies tool count against the 4–5 tool guideline, adding selection risk for no schema benefit.",
+    "source": "Domain 2 — Schema Design",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "A create_ticket tool marks every parameter — including internal_notes and cc_emails — as required, even though most tickets never use them. Support agents complain that Claude asks a lot of clarifying questions before it will file even a simple ticket.",
+    "question": "What is the most likely fix?",
+    "options": ["Mark internal_notes and cc_emails as optional with sensible defaults, reserving required for parameters that are truly mandatory (e.g., title, description).", "Mark every parameter as required so Claude always fills in a complete record.", "Remove internal_notes and cc_emails from the schema entirely.", "Force tool_choice to the create_ticket tool specifically so Claude stops hesitating."],
+    "correct": 0,
+    "why": "Why: The exam's rule is to mark parameters required only when truly mandatory — optional parameters with defaults reduce friction. B is the actual cause of the bug, not the fix. C discards useful optional fields instead of simply relaxing their requirement. D forces which tool gets called but doesn't address the unnecessary clarifying questions before that call.",
+    "source": "Domain 2 — Schema Design",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "A general-purpose research assistant should be free to either answer directly from its own knowledge or call a web_search tool when it needs current information — the right behavior differs turn to turn and shouldn't be forced either way.",
+    "question": "Which tool_choice setting fits this agentic loop?",
+    "options": ["tool_choice: \"auto\" — the model decides per turn whether to call a tool or respond in text.", "tool_choice: \"any\" — force a tool call on every turn.", "tool_choice: { type: \"tool\", name: \"web_search\" } — force the search tool on every turn.", "Omit tool_choice and reject any response from Claude that isn't a tool call."],
+    "correct": 0,
+    "why": "Why: auto is the correct default for agentic loops — the model needs freedom to decide when to call a tool versus respond with text. B and C both force a tool call every turn, breaking the desired free-form behavior. D isn't a coherent way to implement the stated requirement.",
+    "source": "Domain 2 — tool_choice Modes",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "Every inbound support message must be run through the same classify_ticket tool to get a category and priority. The agent has other tools available for later steps, but this first classification call must always use that exact tool and schema, with no exceptions.",
+    "question": "Which tool_choice setting guarantees this?",
+    "options": ["tool_choice: \"auto\"", "tool_choice: \"any\"", "tool_choice: { type: \"tool\", name: \"classify_ticket\" }", "No tool_choice, paired with a strongly worded system prompt instruction."],
+    "correct": 2,
+    "why": "Why: A forced tool_choice naming a specific tool guarantees schema compliance for one known structure — exactly what's needed here. A doesn't guarantee any tool call happens. B guarantees some tool call, but lets the model pick among whichever tools are available rather than specifically classify_ticket. D relies on the model following instructions rather than a hard guarantee.",
+    "source": "Domain 2 — tool_choice Modes",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "A developer is designing a workflow where an MCP database server needs data from an MCP filesystem server, and proposes configuring the two servers to call each other directly to save a round trip through the client.",
+    "question": "What's wrong with this plan under MCP's architecture?",
+    "options": ["Nothing — direct server-to-server calls are the standard optimization.", "MCP follows a host ⊃ client ↔ server model; all tool-call routing goes through the client, and servers do not connect directly to one another.", "MCP servers can only be filesystem or database types, so this pairing isn't supported at all.", "The host application would have to run as the server for this to work."],
+    "correct": 1,
+    "why": "Why: In MCP's three-layer model, the host contains the client and the client connects to servers — \"MCP servers connect directly to each other\" is a named exam trap and is incorrect. A simply restates that trap. C invents a constraint not present in the architecture. D misdescribes the host/server relationship.",
+    "source": "Domain 2 — MCP Architecture",
+    "docKey": "mcp"
+  },
+  {
+    "scenario": "A teammate asks how an MCP client actually talks to an MCP server under the hood — whether it's a REST API, a message queue, or something else — before they design a new integration.",
+    "question": "What's the correct description of the underlying protocol?",
+    "options": ["REST over HTTPS, using standard resource URLs.", "JSON-RPC 2.0, transported over stdio or streamable HTTP.", "GraphQL queries over a persistent WebSocket connection.", "gRPC with protocol-buffer payloads over TCP."],
+    "correct": 1,
+    "why": "Why: MCP's protocol is JSON-RPC 2.0 over stdio or streamable HTTP. A, C, and D describe plausible-sounding but incorrect transports/protocols that MCP does not use.",
+    "source": "Domain 2 — MCP Architecture",
+    "docKey": "mcp"
+  },
+  {
+    "scenario": "A developer wants to connect Claude Desktop to their personal Figma account via an MCP server. This is specific to their machine and credentials — it must never end up in the shared project repository where teammates would inherit it.",
+    "question": "Where should this MCP server be configured?",
+    "options": [".mcp.json in the project root, since that's where all MCP servers belong.", "~/.claude.json — the personal/global configuration file, which is not committed to version control.", "A shared team wiki page listing everyone's individual credentials.", "Inside the system prompt, as a text instruction describing the Figma connection."],
+    "correct": 1,
+    "why": "Why: ~/.claude.json is the personal/global configuration file and isn't committed — the right place for an individually credentialed server. A is the project-shared file and would leak personal credentials to the whole team. C and D aren't real MCP configuration mechanisms.",
+    "source": "Domain 2 — MCP Architecture",
+    "docKey": "mcp"
+  },
+  {
+    "scenario": "A team is scoping a project that needs to read and write rows in a common cloud data warehouse. An engineer proposes spending the next two sprints writing a custom MCP server from scratch before even checking what's already available.",
+    "question": "What does the exam's guidance say the team should do first?",
+    "options": ["Proceed directly with a custom build for maximum control.", "Check whether a community MCP server already meets the requirement, and only build custom if none does.", "Skip MCP entirely and have Claude call the warehouse's REST API directly inside every prompt.", "Build a minimal custom server first, then evaluate community options afterward if it turns out to be inadequate."],
+    "correct": 1,
+    "why": "Why: The key rule is to use community MCP servers first and only build custom when no community server meets the requirement. A skips that check outright. C abandons MCP rather than evaluating it properly. D reverses the recommended order — the community check should come before building, not after.",
+    "source": "Domain 2 — MCP Architecture",
+    "docKey": "mcp"
+  },
+  {
+    "scenario": "A tool that calls a third-party shipping API hits a rate limit mid-request. The engineer implementing the tool has to decide what to hand back to Claude so it can react appropriately.",
+    "question": "Which return value follows the exam-tested error-handling pattern?",
+    "options": ["The plain string \"Error: something went wrong, please try again.\"", "{\"errorCategory\": \"transient\", \"isRetryable\": true, \"description\": \"Rate limit hit; retry after 5 seconds\"}", "{\"errorCategory\": \"not found\", \"isRetryable\": false, \"description\": \"No shipment found\"}", "An empty successful response with no data, so Claude assumes there's simply nothing to ship."],
+    "correct": 1,
+    "why": "Why: The exam-tested pattern is structured metadata with errorCategory (transient/validation/business/permission), isRetryable, and a description; a rate limit is a transient, retryable failure. A is the generic-string trap the exam calls out as wrong. C uses \"not found,\" a category the doc explicitly says is deliberately absent — and a rate limit isn't a not-found case anyway. D disguises a real access failure as a valid empty result.",
+    "source": "Domain 2 — Tool Error Handling",
+    "docKey": "toolchoice"
+  },
+  {
+    "scenario": "A lookup_inventory tool's error handling was written so that any exception — a database timeout, an auth failure, or a query that legitimately matches zero SKUs — all get caught and returned to Claude as a plain \"no items found\" with no further detail.",
+    "question": "What's the problem with this implementation, per the exam's critical distinction?",
+    "options": ["There's no problem — collapsing all cases to a uniform empty result keeps things simple for Claude.", "It silently swallows genuine access failures (timeouts, auth errors) by disguising them as valid empty results, when those should instead be retried or escalated.", "Zero-SKU matches should never be reported to Claude at all.", "The tool should throw an unhandled exception instead of returning anything."],
+    "correct": 1,
+    "why": "Why: Access failures like timeouts and auth errors should be retried or escalated — something actually went wrong — while a genuine empty result should simply be accepted; the exam explicitly warns against silently swallowing an access failure. A endorses exactly the flawed behavior described. C contradicts the guidance that a true empty result is a valid, reportable answer. D isn't the prescribed fix and would break the calling agent instead of returning actionable, structured information.",
+    "source": "Domain 2 — Tool Error Handling",
+    "docKey": "toolchoice"
+  }
+];
+const NEW_QUESTIONS_D4 = [
+  {
+    "scenario": "A team building a customs-declaration review agent keeps rewriting their system prompt haphazardly — sometimes leading with output format, sometimes burying the agent's role at the end — and gets inconsistent behavior across revisions.",
+    "question": "What four-part structure does the exam recommend for organizing a system prompt?",
+    "options": [
+      "Output format specification, then calibration examples, then role and context, then rules and constraints",
+      "Role and context, then rules and constraints, then output format specification, then calibration examples",
+      "Rules and constraints, then role and context, then calibration examples, then output format specification",
+      "Calibration examples, then output format specification, then rules and constraints, then role and context"
+    ],
+    "correct": 1,
+    "why": "Why: The recommended structure establishes who the model is and what it's doing first, then what it must/must not do, then the output shape, then calibration examples last so each layer builds on the one before it. The other orderings front-load format or examples before the model even knows its role or constraints, which the exam treats as poor system prompt design even though the same four elements are present.",
+    "source": "Domain 4 — System Prompts",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A system prompt tells a code-review agent to \"flag critical and minor issues appropriately,\" but in production the agent flags a missing docstring with the same urgency as a hardcoded API key.",
+    "question": "What's the most effective fix?",
+    "options": [
+      "Raise the temperature so the model varies its severity judgments more naturally",
+      "Move the severity instructions from the system prompt into the user message instead",
+      "Add 2–3 calibration examples in the system prompt, each showing a specific code sample labeled at its severity level",
+      "Add the instruction \"use good judgment when assigning severity\""
+    ],
+    "correct": 2,
+    "why": "Why: Without examples of what counts as \"critical\" vs. \"minor,\" the model treats all issues as equally important — concrete calibration examples fix that directly. Raising temperature only adds randomness, not calibration. Moving the instructions to the user message loses the caching benefit of a stable system prompt without fixing the missing calibration. \"Use good judgment\" is exactly the kind of vague prose the exam says concrete examples must replace.",
+    "source": "Domain 4 — System Prompts",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A document-intake pipeline receives a mix of invoices, receipts, and purchase orders with no way to know in advance which type is coming. Three tools exist — extract_invoice, extract_receipt, extract_purchase_order — and every document must produce a structured extraction.",
+    "question": "Which tool_choice setting fits this scenario?",
+    "options": [
+      "tool_choice: any",
+      "tool_choice: { type: \"tool\", name: \"extract_invoice\" }",
+      "tool_choice: auto",
+      "Prompt-based JSON with a routing instruction written into the prompt"
+    ],
+    "correct": 0,
+    "why": "Why: tool_choice: any guarantees a tool call while letting the model pick which tool matches — the documented fit for \"multiple extraction schemas, document type unknown.\" Forcing extract_invoice specifically would misfire on receipts and purchase orders. tool_choice: auto doesn't guarantee any tool call is made at all. Prompt-based JSON has no schema enforcement and risks malformed or inconsistent output regardless of routing instructions.",
+    "source": "Domain 4 — Structured Output",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "An agentic customer-support loop can either answer directly in plain text or call a create_refund tool. Forcing a tool call on every turn would make the agent try to issue refunds even when a customer is just asking a question.",
+    "question": "Which tool_choice setting is appropriate here?",
+    "options": [
+      "tool_choice: any, so the model must always pick a tool",
+      "tool_choice: { type: \"tool\", name: \"create_refund\" }, forced on every turn",
+      "Remove tools entirely and rely on prompt-based JSON",
+      "tool_choice: auto"
+    ],
+    "correct": 3,
+    "why": "Why: tool_choice: auto lets the model decide whether to call a tool or respond in text — the documented fit for \"agentic loops where text responses are also valid.\" tool_choice: any still forces some tool call on every turn, which is wrong when a plain-text answer is valid. Forcing create_refund specifically would trigger refund calls on ordinary questions. Removing the tools entirely breaks the agent's actual refund functionality.",
+    "source": "Domain 4 — Structured Output",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A ticket-triage extraction schema has a priority field that should only ever be \"low\", \"medium\", or \"high\". In practice, the model sometimes returns values like \"urgent\" or \"not sure,\" which break the downstream routing logic.",
+    "question": "What schema change fixes this?",
+    "options": [
+      "Change priority to a free-text string with a longer description explaining the three allowed values",
+      "Define priority as an enum constrained to exactly [\"low\", \"medium\", \"high\"]",
+      "Make priority nullable so the model can skip it when unsure",
+      "Add a few-shot example that maps \"urgent\" to \"high\""
+    ],
+    "correct": 1,
+    "why": "Why: enum constrains the field to a fixed set of values, structurally preventing freeform output. A longer description relies on the model reading and following it correctly every time rather than enforcing the constraint. Nullable solves a missing-data problem, not an invalid-value problem — priority is presumably always determinable here. Adding one mapped example only patches the single observed value and leaves the field open to any other freeform text.",
+    "source": "Domain 4 — Schema Design for Structured Output",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A security-review agent is given an entire 40-file codebase in a single prompt and asked to find every vulnerability. It misses several issues that are obvious when a human looks at each file individually, and it also misses inconsistencies between files.",
+    "question": "What approach best mitigates this?",
+    "options": [
+      "Run a per-file pass that analyzes each file independently, followed by a separate cross-file integration pass that synthesizes findings",
+      "Increase the temperature so the model pays closer attention to detail across the whole codebase",
+      "Keep the single-pass prompt, but repeat the review instructions three times for emphasis",
+      "Split the codebase into files and review each in a fully isolated session, with no later step to reconcile findings across files"
+    ],
+    "correct": 0,
+    "why": "Why: This is the documented \"attention dilution\" mitigation — processing everything in one pass causes the model to miss details, so per-file passes plus a cross-file integration pass catch both in-file and cross-file issues. Temperature affects randomness, not thoroughness. Repeating instructions doesn't reduce the amount of content diluting the model's attention. Isolated per-file reviews fix the per-file misses but drop the cross-file integration pass, so inter-file inconsistencies still go undetected.",
+    "source": "Domain 4 — Self-Review & Large Documents",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A team's few-shot examples for a contract-clause classifier are all simple input → label pairs with no explanation, and every example is a straightforward, \"typical\" clause. Classification is still inconsistent whenever an unusual clause appears.",
+    "question": "What two changes to the examples does best practice call for?",
+    "options": [
+      "Increase the number of examples to at least 10 and strip out any reasoning to keep them concise",
+      "Replace the few-shot examples with a single long paragraph of instructions",
+      "Include the reasoning behind each label, not just input → output, and add at least one example that covers boundary/edge-case behavior",
+      "Keep the examples as input → output pairs, but add a system-level instruction telling the model to \"consider edge cases\""
+    ],
+    "correct": 2,
+    "why": "Why: Examples should show why the answer is what it is, not just the input and output, and should include at least one boundary-case example. Adding more examples while stripping reasoning goes well past the 2–4 sweet spot and removes the exact improvement needed. Replacing examples with a paragraph of instructions is the opposite of the fix when instructions alone are already producing inconsistent output. A vague instruction to \"consider edge cases\" substitutes for a concrete edge-case example, the same trap as relying on prose instead of calibration examples.",
+    "source": "Domain 4 — Few-Shot Examples",
+    "docKey": "fewshot"
+  },
+  {
+    "scenario": "A team is deciding where to put their 3 few-shot examples for a document-classification prompt. The examples are stable and reused on every request, but a colleague suggests putting them in the user message instead of the system prompt because \"it doesn't matter where they go.\"",
+    "question": "Is the colleague correct?",
+    "options": [
+      "No — placing stable examples in the system prompt lets them benefit from prompt caching across requests, while the user message better suits examples that vary per request",
+      "Yes — placement has no effect on cost or performance either way",
+      "No — few-shot examples must always go in the user message, never the system prompt",
+      "No — few-shot examples should be placed in a separate, third message type outside both the system prompt and user message"
+    ],
+    "correct": 0,
+    "why": "Why: Examples placed in the system prompt benefit from caching since the system prompt is reused across requests, while the user message suits per-request variation — so placement does matter here. \"No effect\" ignores the real caching cost difference. Claiming examples must always go in the user message reverses the actual guidance for stable, reused examples like these. Inventing a separate third message type isn't part of the documented pattern.",
+    "source": "Domain 4 — Few-Shot Examples",
+    "docKey": "fewshot"
+  },
+  {
+    "scenario": "A legal-document pipeline uses one large prompt to extract clauses, validate them against a rulebook, and produce a formatted summary all at once. Quality is inconsistent, and whenever the formatting step fails, the entire pipeline — including the expensive extraction step — has to be rerun from scratch.",
+    "question": "What restructuring addresses both problems?",
+    "options": [
+      "Keep a single prompt but increase max_tokens so the model has more room to get every step right",
+      "Run the single prompt several times in parallel and pick the most common output",
+      "Replace the single prompt with one very long few-shot example demonstrating the entire pipeline end-to-end",
+      "Break the pipeline into a chain of focused prompts — extract, then validate, then format, then synthesize — so each step is smaller, more accurate, and can be retried independently"
+    ],
+    "correct": 3,
+    "why": "Why: Chaining focused, single-responsibility prompts increases per-step accuracy and lets individual steps be retried without rerunning the whole pipeline — exactly the documented advantage of prompt chaining. More max_tokens doesn't fix the underlying issue of combining unrelated tasks into one prompt. Running the prompt in parallel and voting isn't a documented technique and doesn't solve the rerun-from-scratch problem. A single giant few-shot example still couples every phase into one prompt, so a failure anywhere still means starting over.",
+    "source": "Domain 4 — Prompt Chaining",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A structured-extraction pipeline has already retried a failed validation twice with specific error feedback each time, and the output is still wrong in the same way. The engineer is debating whether to retry a third time or hand the case off to a human.",
+    "question": "What does best practice say?",
+    "options": [
+      "Keep retrying indefinitely with the same error feedback until it eventually succeeds",
+      "Escalate — repeated failures beyond two retries, low confidence, or a fundamentally wrong interpretation are signals to escalate rather than keep retrying",
+      "Retry once more, but this time omit the error message so the model tries a fresh approach",
+      "Escalate immediately, since any validation failure at all should go straight to a human"
+    ],
+    "correct": 1,
+    "why": "Why: The guidance distinguishes retry-worthy issues (validation errors, format mismatches, missing fields the model can fix) from escalation triggers (repeated failures beyond two retries, low confidence, fundamentally wrong interpretation) — this case has already hit that threshold. Retrying indefinitely ignores that repeated identical failures signal the model can't self-correct this particular issue. Omitting the error message removes the exact information the model needs to correct its output. Escalating after every single validation failure is too aggressive — most first-time validation errors are retry-worthy, not immediate escalations.",
+    "source": "Domain 4 — Retry Pattern",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "A Python pipeline uses a Pydantic model to validate extracted invoice line items. The JSON schema alone confirms each field has the right type, but it doesn't catch a case where the summed line-item amounts don't match the stated invoice total, or where the shipped date is listed before the ordered date.",
+    "question": "What role do Pydantic's custom validators play here that the JSON schema alone can't provide?",
+    "options": [
+      "They enforce semantic rules a JSON schema cannot express, such as sums that must match or dates that must be correctly ordered, and their ValidationError produces per-field messages that can feed directly into a retry prompt",
+      "They replace the need for a JSON schema entirely, since Pydantic validates types on its own",
+      "They only re-check that field types match the schema, duplicating what the JSON schema already verifies",
+      "They automatically correct invalid values in place so no retry is ever needed"
+    ],
+    "correct": 0,
+    "why": "Why: Pydantic parsing enforces the schema, but custom validators add semantic checks — like cross-field sums or date ordering — that a JSON schema can't express, and the resulting ValidationError messages are precise enough to drop straight into a retry-with-error-feedback prompt. Schema-level parsing and custom validation are complementary, not a replacement for each other. Calling validators mere type-duplication misses their actual semantic role. Validators detect and describe problems rather than silently fixing data, which is exactly what enables the necessary retry step.",
+    "source": "Domain 4 — Retry Pattern",
+    "docKey": "promptbasics"
+  },
+  {
+    "scenario": "An analytics team needs to classify 2 million historical support tickets overnight. None of the results need to be shown to a user in real time, and the team's top priority is minimizing API cost.",
+    "question": "Which approach fits this workload, and why?",
+    "options": [
+      "Synchronous API calls — Batch API can only be used for real-time, user-facing workloads",
+      "Batch API — because it's guaranteed to finish faster than synchronous calls for large volumes",
+      "Batch API — it's roughly 50% cheaper than synchronous calls, and the latency-tolerant, non-interactive nature of this bulk job matches its intended use case",
+      "Neither — bulk classification of historical data isn't a valid use case for either API"
+    ],
+    "correct": 2,
+    "why": "Why: Batch API is built for latency-tolerant, bulk, non-interactive workloads and offers roughly 50% cost savings versus synchronous calls, which is exactly this scenario. The claim that Batch API is only for real-time workloads has it backwards — it's explicitly not for real-time or user-facing requests. Batch API can take up to 24 hours and is never described as faster, only cheaper, so \"guaranteed faster\" misstates the tradeoff. This overnight, cost-sensitive bulk job is precisely the documented use case, so dismissing both options is wrong.",
+    "source": "Domain 4 — Batch API",
+    "docKey": "batch"
+  },
+  {
+    "scenario": "A code-generation agent is asked, in the same conversation where it just wrote the code, to review its own output for bugs. It reports the code is correct, but a human reviewer later finds an obvious off-by-one error.",
+    "question": "What's the most likely explanation, and what's the fix?",
+    "options": [
+      "The context window was too small to hold the generated code; increasing max_tokens and re-running the review in the same conversation will fix it",
+      "The model retains the reasoning that produced the original output and is biased toward confirming it; use a separate model instance with no shared conversation history to perform the review",
+      "The same-session review approach is fine; the system prompt just needs a more detailed definition of what counts as a bug",
+      "Self-review is fundamentally unreliable, so no review step — human or model — should ever be used"
+    ],
+    "correct": 1,
+    "why": "Why: A model reviewing its own output in the same session retains the reasoning that produced it and is biased toward confirming that reasoning; a separate instance with no shared history sees only the output, not the biasing context. Misdiagnosing this as a context-window limit targets the wrong cause. Keeping the same-session structure and adding a better bug definition assumes instructions alone can overcome the bias, which the exam says they can't. Eliminating review altogether overcorrects — the documented fix is changing how review is done, not removing it.",
+    "source": "Domain 4 — Self-Review Limitation",
+    "docKey": "promptbasics"
+  }
+];
+const NEW_QUESTIONS_D5 = [
+  {
+    "scenario": "A payment reconciliation agent hits an API failure mid-task. Instead of returning \"Something went wrong, please try again,\" the team wants it to return a failure_type, partial_results, alternatives_tried, and suggested_action.",
+    "question": "Why does this structured format matter?",
+    "options": ["It matters only for logging purposes; the next agent or human still needs to investigate from scratch.", "It gives the next agent or human enough information to attempt intelligent recovery instead of nothing.", "It is required by API providers before they will return a response.", "It replaces the need for retry logic entirely."],
+    "correct": 1,
+    "why": "Why: Generic error messages give the next agent or human nothing to work with. Structured error context (failure type, partial results, alternatives tried, suggested action) enables intelligent recovery. A is wrong because the value goes beyond logging — it's directly actionable. C is wrong; this is a design choice, not an API requirement. D is wrong; structured context complements retry logic, it doesn't replace it.",
+    "source": "Domain 5 — Error Propagation",
+    "docKey": "context"
+  },
+  {
+    "scenario": "An agent searches a product catalog for a discontinued SKU. The search executes successfully and returns zero matching rows.",
+    "question": "What should the agent do?",
+    "options": ["Retry the search with different credentials, since zero results likely indicates an access problem.", "Accept the empty result as the answer — the search ran successfully and the product simply doesn't exist in the catalog.", "Escalate to a human immediately, since any empty result is suspicious.", "Wait and retry after a delay, treating this like a rate-limited request."],
+    "correct": 1,
+    "why": "Why: If the tool executed successfully and returned nothing, that's a valid result — absence of data is the answer. A is wrong because there's no indication of an authentication issue; that logic applies to a 401 response, not a clean empty result. C is wrong; escalation isn't warranted for a legitimate empty result. D is wrong; the Retry-After/wait pattern applies to rate limiting (429), not valid empty results.",
+    "source": "Domain 5 — Valid Empty Results vs Access Failures",
+    "docKey": "context"
+  },
+  {
+    "scenario": "An agent calls an internal HR API to pull an employee record and receives an HTTP 401 Unauthorised response with no data.",
+    "question": "How should this be classified and handled?",
+    "options": ["Valid empty result — accept that the employee record doesn't exist.", "Access failure — retry with corrected credentials or escalate; the tool did not actually execute successfully.", "Rate limit — wait for the Retry-After header before trying again.", "Treat it the same as a database query that legitimately returned an empty set."],
+    "correct": 1,
+    "why": "Why: A 401 is an access failure, not a valid empty result — the tool failed to execute correctly, so the correct action is to retry with correct credentials or escalate. A and D are wrong because they conflate an access failure with a legitimate empty dataset, which is exactly the distinction the exam tests. C is wrong; 401 isn't a rate-limit signal, so Retry-After doesn't apply here.",
+    "source": "Domain 5 — Valid Empty Results vs Access Failures",
+    "docKey": "context"
+  },
+  {
+    "scenario": "A batch of outbound calls to a third-party pricing API starts returning HTTP 429 responses with a Retry-After: 30 header.",
+    "question": "What's the correct handling?",
+    "options": ["Treat the 429 as a valid empty result and move on without the pricing data.", "Immediately retry in a tight loop until a response succeeds.", "Wait at least the duration specified by Retry-After before retrying, since this is an access failure, not an empty result.", "Escalate to a human without attempting any retry."],
+    "correct": 2,
+    "why": "Why: Rate limiting is classified as an access failure, and the correct action is to wait and retry while respecting the Retry-After header. A is wrong because it misclassifies an access failure as a valid empty result. B is wrong because ignoring Retry-After and retrying immediately risks worsening the rate limiting. D is wrong because retrying appropriately is the correct first step, not immediate escalation.",
+    "source": "Domain 5 — Valid Empty Results vs Access Failures",
+    "docKey": "context"
+  },
+  {
+    "scenario": "A research pipeline generates a report with inline hyperlinks embedded directly in the prose (e.g., \"Revenue grew 12% [source]\"). Later, a downstream step summarises the report for an executive briefing.",
+    "question": "What happens to the citations, and what's the production-grade fix?",
+    "options": ["Inline links are preserved automatically during summarisation; no fix is needed.", "Inline links are typically lost during summarisation; use structured claim-source mappings (claim, source, url, date) instead, which survive synthesis.", "Inline links should be converted to footnotes, which are immune to being dropped during summarisation.", "The fix is to avoid summarising the report at all, regardless of length."],
+    "correct": 1,
+    "why": "Why: Structured claim-source mappings survive synthesis; inline links do not. For production systems and multi-step pipelines, the fix is to switch to structured mappings. A is wrong — it directly contradicts the core lesson. C is wrong; footnotes are still inline-text-dependent and have no special protection from being dropped. D is wrong; avoiding summarisation altogether isn't the documented fix and is often impractical.",
+    "source": "Domain 5 — Source Attribution",
+    "docKey": "memory"
+  },
+  {
+    "scenario": "While researching, an agent finds two sources describing Claude's context window: a 2024-03-15 Anthropic docs page stating 200K tokens, and a 2023-11-20 blog post stating 100K tokens.",
+    "question": "What's the correct way to handle this apparent conflict?",
+    "options": ["Average the two figures and report 150K tokens as a reasonable estimate.", "Discard the older source and report only the more recent 200K figure.", "Present both claims annotated with their sources and dates, noting this may reflect a temporal change rather than a true conflict, and let the consumer interpret it.", "Discard both sources since they disagree and rely on the model's own prior knowledge instead."],
+    "correct": 2,
+    "why": "Why: Never average conflicting claims or silently pick one — annotate both with provenance and dates and let the consumer decide; here the discrepancy likely reflects a temporal change (the window grew over time), not a genuine conflict. A is wrong; averaging disparate claims produces a meaningless number. B is wrong; picking the more recent source without annotation is a named exam trap. D is wrong; discarding sourced information in favor of unverified internal knowledge is worse, not better.",
+    "source": "Domain 5 — Source Attribution",
+    "docKey": "memory"
+  },
+  {
+    "scenario": "Midway through a routine billing dispute, a customer says, \"I don't want to keep explaining this — just get me a person.\" The agent believes it could likely resolve the issue in one more step.",
+    "question": "What should the agent do?",
+    "options": ["Attempt one more resolution step first, since it's likely to succeed, then escalate only if that fails.", "Honour the request immediately and escalate to a human without attempting further investigation.", "Ask the customer to confirm they really want to escalate before proceeding.", "Decline to escalate since the issue is simple and within the agent's ability to resolve."],
+    "correct": 1,
+    "why": "Why: An explicit request for a human is a valid escalation trigger that must be honoured immediately, without attempting further investigation first — regardless of how close the agent believes it is to resolving the issue. A, C, and D are all wrong because they second-guess or delay an explicit human request, contradicting the honour-immediately rule.",
+    "source": "Domain 5 — Escalation & Ambiguity",
+    "docKey": "context"
+  },
+  {
+    "scenario": "A customer asks a support agent to match a competitor's advertised price. Store policy covers price adjustments for the company's own site sales and promotions but says nothing about matching competitor prices.",
+    "question": "How should this be classified, and what should the agent do?",
+    "options": ["This is a policy violation — refuse the request and explain that price matching isn't allowed.", "This is a policy gap — the policy is silent on this scenario, so the agent should escalate rather than guess.", "This is a valid empty result — no price-matching data exists, so decline the request.", "This is an access failure — retry the policy lookup with different search terms."],
+    "correct": 1,
+    "why": "Why: The policy doesn't address competitor price matching at all — that silence/ambiguity is a policy gap, which calls for escalation, distinct from a violation where the policy explicitly forbids the request. A is wrong because the policy doesn't forbid this scenario, it's simply silent, so refusing as a violation is incorrect. C and D are wrong because this is a policy-interpretation issue, not a data retrieval or access issue.",
+    "source": "Domain 5 — Escalation & Ambiguity",
+    "docKey": "context"
+  },
+  {
+    "scenario": "An agent looks up a customer by name to process a refund, and the lookup tool returns three different customer records, all named \"John Smith,\" with different account numbers.",
+    "question": "What should the agent do?",
+    "options": ["Select the record with the most recent activity, since that's most likely the correct customer.", "Select the first record returned by the tool to keep the process moving.", "Ask the customer for an additional identifier (e.g., account number, email, or order ID) rather than guessing.", "Process the refund against all three records to be safe."],
+    "correct": 2,
+    "why": "Why: When a tool returns multiple matching records, the agent should ask for additional identifiers and must never select by heuristic. A and B are both heuristics (recency, list order) that risk acting on the wrong account. D is wrong because applying the action to all matches could cause serious harm, such as duplicate or wrongful refunds.",
+    "source": "Domain 5 — Escalation & Ambiguity",
+    "docKey": "context"
+  },
+  {
+    "scenario": "An agent is asked to review an 80-file codebase for a specific security vulnerability pattern. Loading all 80 files into a single context window at once causes it to miss issues in files near the middle of the batch.",
+    "question": "What strategy addresses this?",
+    "options": ["Increase the model's temperature to improve attention across the full context.", "Do per-file passes and then integrate the findings, rather than analysing all files in one pass, to avoid attention dilution.", "Ask the model to summarise the codebase first, then analyse the summary.", "Split the review across multiple team members instead of using the agent."],
+    "correct": 1,
+    "why": "Why: Per-file passes plus an integration step is the documented strategy for large codebases, avoiding the attention dilution that results from cramming everything into one context window. A is wrong; temperature doesn't address attention or context-capacity issues. C is wrong; summarising code risks losing exact details needed for a security review — the same trap as progressive summarisation. D is wrong; it removes the agent from the task rather than fixing the underlying approach.",
+    "source": "Domain 5 — Context Window Strategies",
+    "docKey": "context"
+  },
+  {
+    "scenario": "A production application sends the same lengthy system prompt (tool definitions, instructions, examples) with every single API request, along with a short, unique user message each time.",
+    "question": "Which context window strategy best fits this situation?",
+    "options": ["Fresh start + summary injection for every request.", "Prompt caching, since the system prompt is repeated across requests and caching saves cost and latency.", "Scratchpad files to store the system prompt externally.", "Per-file passes and integration to break up the system prompt."],
+    "correct": 1,
+    "why": "Why: Prompt caching is specifically for repeated system prompts across requests, and it saves both cost and latency. A is wrong; a fresh start on every request is unnecessary and wasteful for a stable, repeated prompt. C is wrong; scratchpads are for persisting findings across context boundaries in long tasks, not for repeated static prompt content. D is wrong; per-file passes apply to large codebase analysis, not to repeated system prompt content.",
+    "source": "Domain 5 — Context Window Strategies",
+    "docKey": "context"
+  },
+  {
+    "scenario": "During a long multi-turn planning session, the agent keeps referencing a budget figure the user corrected three turns ago, and it also fails to incorporate a new constraint the user just added.",
+    "question": "What does this behaviour indicate, and what's the appropriate response?",
+    "options": ["The model is being intentionally unhelpful; the fix is to repeat the instruction more forcefully.", "This is a context window pressure signal (ignoring recent information); the fix is a fresh start with a curated summary injection.", "This is expected behaviour and requires no intervention.", "The fix is to lower the temperature setting to make the model more consistent."],
+    "correct": 1,
+    "why": "Why: Ignoring recent information — along with repeating itself and contradicting earlier statements — is a documented context window pressure signal, and the fix is a fresh start with a curated summary injection. A is wrong; this isn't a matter of willingness but of the window being too full or stale. C is wrong; this is exactly the kind of degradation the exam expects you to recognize and act on. D is wrong; temperature doesn't fix context capacity or staleness issues.",
+    "source": "Domain 5 — Context Window Strategies",
+    "docKey": "context"
+  },
+  {
+    "scenario": "An order-status agent queries two internal systems: the orders database (succeeds, returns 3 orders) and the payments database (fails with a timeout). The agent needs to hand off to a human support rep.",
+    "question": "What should the structured error context passed to the human include?",
+    "options": ["Only the failure type, so the human knows a payments error occurred.", "The failure type, the partial results (the 3 orders that were retrieved successfully), what recovery was attempted, and a suggested next action.", "A generic message stating the handoff occurred, with full technical logs attached as a separate file for the human to parse.", "Nothing — the human should re-run the same queries from scratch to avoid relying on partial data."],
+    "correct": 1,
+    "why": "Why: Structured error context should include failure type, partial results, alternatives tried, and suggested action — all of which give the human something actionable. A is wrong because it omits the successfully retrieved partial results, which are valuable. C is wrong; a generic message plus raw logs is not structured, actionable context. D is wrong because it discards useful partial results and adds unnecessary rework instead of building on what already succeeded.",
+    "source": "Domain 5 — Error Propagation",
+    "docKey": "context"
+  }
+];
+
+function buildDocQuestionBank() {
+  const domainMeta = {
+    D1: "Agentic Architecture & Orchestration",
+    D2: "Tool Design & MCP Integration",
+    D3: "Claude Code Configuration & Workflows",
+    D4: "Prompt Engineering & Structured Output",
+    D5: "Context Management & Reliability"
+  };
+  const fromDomains = domains.flatMap(d => d.questions.map(q => Object.assign({ domainCode: d.code, domainName: d.name }, q)));
+  const fromLive = LIVE_QUESTIONS.map(q => ({
+    domainCode: q.domainCode, domainName: q.domainName, scenario: "", question: q.question,
+    options: q.options, correct: q.correct, why: q.why, source: "Domain 3 — " + q.domainName, doc: DOCS.cli
+  }));
+  const tagNew = (q, code) => Object.assign({ domainCode: code, domainName: domainMeta[code], scenario: q.scenario || "", doc: DOCS[q.docKey] || DOCS.loop }, q);
+  const fromNew = [
+    ...NEW_QUESTIONS_D1.map(q => tagNew(q, "D1")),
+    ...NEW_QUESTIONS_D2.map(q => tagNew(q, "D2")),
+    ...NEW_QUESTIONS_D4.map(q => tagNew(q, "D4")),
+    ...NEW_QUESTIONS_D5.map(q => tagNew(q, "D5"))
+  ];
+  return [...fromDomains, ...fromLive, ...fromNew];
+}
+const DOC_QUESTION_BANK = buildDocQuestionBank();
+
+function pickBalancedQuestions(n) {
+  const byDomain = {};
+  DOC_QUESTION_BANK.forEach(q => { (byDomain[q.domainCode] = byDomain[q.domainCode] || []).push(q); });
+  Object.keys(byDomain).forEach(code => { byDomain[code] = shuffle(byDomain[code].slice()); });
+  const codes = Object.keys(byDomain).sort();
+  const picked = [];
+  let round = 0;
+  while (picked.length < n) {
+    let addedAny = false;
+    for (const code of codes) {
+      if (picked.length >= n) break;
+      const pool = byDomain[code];
+      if (round < pool.length) { picked.push(pool[round]); addedAny = true; }
+    }
+    round++;
+    if (!addedAny) break;
+  }
+  return shuffle(picked);
+}
+
+function buildStudyMarkdown(questions) {
+  const lines = [];
+  lines.push("# CCA-F Simulation — Documento de Estudio");
+  lines.push("");
+  lines.push("Generado el " + new Date().toLocaleDateString() + " · " + questions.length + " preguntas");
+  lines.push("");
+  questions.forEach((q, i) => {
+    lines.push("## Pregunta " + (i + 1) + " — " + q.domainCode + " · " + q.domainName);
+    lines.push("");
+    if (q.scenario) { lines.push("**Escenario:** " + q.scenario); lines.push(""); }
+    lines.push("**" + q.question + "**");
+    lines.push("");
+    q.options.forEach((opt, idx) => {
+      const letter = String.fromCharCode(65 + idx);
+      lines.push(idx === q.correct ? "- **" + letter + ") " + opt + " ✅**" : "- " + letter + ") " + opt);
+    });
+    lines.push("");
+    lines.push("**Respuesta correcta:** " + String.fromCharCode(65 + q.correct) + ") " + q.options[q.correct]);
+    lines.push("");
+    lines.push("_" + q.why + "_");
+    if (q.source) { lines.push(""); lines.push("Fuente: " + q.source); }
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+function downloadTextFile(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildStudyPdf(questions) {
+  if (!window.jspdf) { alert("PDF library didn't load — check your internet connection and try again."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(217, 119, 87);
+  doc.text("CCA-F Simulation — Documento de Estudio", 20, y); y += 10;
+  doc.setFontSize(11); doc.setTextColor(90, 90, 90);
+  doc.text(questions.length + " preguntas  |  Generado: " + new Date().toLocaleDateString(), 20, y); y += 14;
+  doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
+
+  questions.forEach((q, i) => {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(30, 30, 30);
+    const headerLines = doc.splitTextToSize("P" + (i + 1) + " — " + q.domainCode + " · " + q.domainName, 170);
+    doc.text(headerLines, 20, y); y += headerLines.length * 5 + 3;
+
+    if (q.scenario) {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "italic"); doc.setFontSize(9.5); doc.setTextColor(90, 90, 90);
+      const scLines = doc.splitTextToSize(q.scenario, 170);
+      doc.text(scLines, 20, y); y += scLines.length * 4.5 + 3;
+    }
+
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); doc.setTextColor(30, 30, 30);
+    const qLines = doc.splitTextToSize(q.question, 170);
+    doc.text(qLines, 20, y); y += qLines.length * 5 + 3;
+
+    q.options.forEach((opt, idx) => {
+      if (y > 265) { doc.addPage(); y = 20; }
+      const isCorrect = idx === q.correct;
+      doc.setFont("helvetica", isCorrect ? "bold" : "normal"); doc.setFontSize(10);
+      if (isCorrect) doc.setTextColor(30, 140, 80); else doc.setTextColor(60, 60, 60);
+      const optLines = doc.splitTextToSize(String.fromCharCode(65 + idx) + ") " + opt + (isCorrect ? "  ✔" : ""), 165);
+      doc.text(optLines, 24, y); y += optLines.length * 4.8 + 1;
+    });
+    y += 2;
+
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
+    const whyLines = doc.splitTextToSize(q.why, 170);
+    doc.text(whyLines, 20, y); y += whyLines.length * 4.3 + 8;
+  });
+
+  doc.save("CCA-F_Documento_Estudio_" + questions.length + "preguntas.pdf");
+}
+
+(function () {
+  const allOpt = document.querySelector("#doc-question-count-select option[value=\"all\"]");
+  if (allOpt) allOpt.textContent = "Todas las disponibles (" + DOC_QUESTION_BANK.length + ")";
+})();
+
+function getSelectedDocQuestions() {
+  const raw = el("doc-question-count-select").value;
+  const count = raw === "all" ? DOC_QUESTION_BANK.length : Math.min(parseInt(raw, 10), DOC_QUESTION_BANK.length);
+  return pickBalancedQuestions(count);
+}
+
+el("doc-download-md-btn").onclick = () => {
+  const qs = getSelectedDocQuestions();
+  downloadTextFile("CCA-F_Documento_Estudio_" + qs.length + "preguntas.md", buildStudyMarkdown(qs), "text/markdown");
+};
+el("doc-download-pdf-btn").onclick = () => {
+  const qs = getSelectedDocQuestions();
+  buildStudyPdf(qs);
+};
+
 
 const DOMAIN_COLORS = { D1: "var(--d1)", D2: "var(--d2)", D3: "var(--d3)", D4: "var(--d4)", D5: "var(--d5)" };
 
