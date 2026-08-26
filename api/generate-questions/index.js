@@ -27,10 +27,50 @@ const TOOL_SCHEMA = {
   }
 };
 
-function systemPrompt(count) {
-  return `You are writing practice exam questions for the Claude Certified Architect (CCA-F) certification exam, in the same style as its official domain guides: a short realistic workplace scenario, a question, exactly 4 multiple-choice options, one correct answer, and a "why" explanation that justifies the correct answer and briefly explains why each wrong option is wrong.
+const STYLE_EXAMPLES = [
+  {
+    scenario: "A team built an agent that processes refund requests. They notice the agent sometimes stops after just 2 tool calls when clearly more steps were needed, and other times keeps iterating unnecessarily for 15+ turns on simple requests. Their current implementation checks whether the word \"done\" appears anywhere in Claude's response text to decide whether to stop.",
+    question: "What is the most reliable way to fix this premature/excessive termination problem?",
+    options: [
+      "Increase the iteration cap to 20 to give the agent more room.",
+      "Check the stop_reason field in the API response — continue while it is \"tool_use\" and stop when it changes to \"end_turn\".",
+      "Ask Claude in the system prompt to always say \"TASK COMPLETE\" as the very last word, and check for that exact string.",
+      "Track how many tool calls have been made and stop automatically once 5 have been executed."
+    ],
+    correct: 1,
+    why: "Why: stop_reason is the only deterministic and unambiguous termination signal. A) doesn't fix the root cause — iteration caps are only a safety net. C) is still parsing natural language, which is ambiguous. D) is an arbitrary cap not tied to whether the task actually finished."
+  },
+  {
+    scenario: "A search tool queries a customer database for \"blue winter jacket\" and returns zero results because the store genuinely never carried that item.",
+    question: "How should this be handled?",
+    options: [
+      "Treat it as an error and retry the search with different parameters automatically.",
+      "Accept it as a valid empty result — the tool executed successfully and the absence of data IS the answer.",
+      "Escalate to a human because the search failed.",
+      "Return a generic error message: \"Something went wrong.\""
+    ],
+    correct: 1,
+    why: "Why: if the tool executed successfully and returned nothing, that's a valid result, not an error. \"Not found\" is deliberately absent from the error categories. A) misdiagnoses a legitimate empty result as a failure. C) escalation isn't warranted when nothing actually went wrong. D) is a generic-failure message that hides what actually happened, which real systems should never do."
+  }
+];
 
-Generate exactly ${count} NEW questions, grounded strictly in the source text the user provides (it was extracted from a PDF and may contain messy formatting, page breaks, or repeated headers/footers — ignore those artifacts and focus on the substantive content). Do not invent facts that aren't supported by the source text or well-established, correct technical knowledge. Vary the sub-topics covered across the ${count} questions instead of clustering on one narrow point. Match the difficulty and tone of a real certification exam: scenario-based, testing applied understanding, not trivia.
+function systemPrompt(count) {
+  const examplesBlock = STYLE_EXAMPLES.map((ex, i) =>
+    `Example ${i + 1}:\n` + JSON.stringify(ex, null, 2)
+  ).join("\n\n");
+
+  return `You are writing practice exam questions for the Claude Certified Architect (CCA-F) certification exam. This is a real, fairly difficult professional certification — not a trivia quiz. Match its actual bar:
+
+- Each question poses a realistic, specific workplace scenario (names, systems, concrete numbers/details) before asking what to do.
+- All 4 options must be plausible to someone who has only partially understood the material — wrong options should represent common misconceptions or "trap" answers, never options that are obviously silly or trivially eliminable.
+- The question must test APPLIED judgment (what should this team/agent/engineer do, and why), not simple recall of a definition or fact.
+- The "why" explanation must justify the correct answer AND briefly explain, option by option (A/B/C/D), why each wrong option is wrong — not just restate the correct answer.
+
+Here are two real examples from this exact exam bank, showing the expected style, tone, and difficulty level:
+
+${examplesBlock}
+
+Generate exactly ${count} NEW questions in this same style, grounded strictly in the source text the user provides below (it was extracted from a PDF and may contain messy formatting, page breaks, or repeated headers/footers — ignore those artifacts and focus on the substantive content). Do not invent facts that aren't supported by the source text or well-established, correct technical knowledge — if the source text is too thin or generic to support ${count} genuinely distinct, non-trivial questions at this difficulty, it is better to return fewer high-quality questions than to pad with weak or repetitive ones. Vary the sub-topics covered across the questions instead of clustering on one narrow point.
 
 Call the return_questions tool with your result. Do not include any other text.`;
 }
