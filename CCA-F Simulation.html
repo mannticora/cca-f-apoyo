@@ -239,8 +239,9 @@
   .option.reveal-correct { border-color: var(--correct); background: var(--correct-tint); }
   .option.selected-pending { border-color: var(--accent); background: var(--bg-scenario); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
   .question-nav-panel {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 6px;
     background: var(--bg-card2);
     border: 1px solid var(--border);
@@ -249,7 +250,7 @@
     margin-bottom: 16px;
   }
   .question-nav-btn {
-    width: 100%;
+    width: 38px;
     aspect-ratio: 1;
     border-radius: 6px;
     border: 1px solid var(--border);
