@@ -619,14 +619,7 @@
   <div class="admin-grid">
     <div class="card">
       <div class="pill">Crear nueva sesión</div>
-      <div style="margin-bottom:8px; font-weight:bold;">Número de preguntas</div>
-      <select id="live-question-count-select">
-        <option value="5">5 preguntas</option>
-        <option value="10">10 preguntas</option>
-        <option value="15">15 preguntas</option>
-        <option value="20" selected="">20 preguntas</option>
-      </select>
-      <div style="margin:14px 0 8px; font-weight:bold;">Duración por persona</div>
+      <div style="margin-bottom:8px; font-weight:bold;">Duración por persona</div>
       <select id="live-duration-select">
         <option value="10">10 minutos</option>
         <option value="15">15 minutos</option>
@@ -637,7 +630,11 @@
         <option value="60">60 minutos</option>
       </select>
       <div style="font-size:12px; color:var(--grey); margin:10px 0;">Cada participante avanza a su propio ritmo con su botón "Siguiente". El cronómetro empieza para cada quien en el momento en que entra a la sesión, no de forma sincronizada.</div>
-      <button class="primary" id="create-live-btn">Generar código y crear sesión</button>
+      <div style="margin:14px 0 8px; font-weight:bold;">Documento de estudio (PDF)</div>
+      <div style="font-size:12px; color:var(--grey); margin-bottom:10px;">Sube el PDF que descargaste en "Documento de estudio" — la sesión se crea con exactamente esas mismas preguntas, en el mismo orden.</div>
+      <input type="file" id="live-pdf-upload-input" accept="application/pdf">
+      <button class="primary" id="live-pdf-create-btn" style="margin-top:12px;">Crear sesión desde este PDF</button>
+      <div id="live-pdf-status" style="font-size:13px; color:var(--grey); margin-top:10px;"></div>
     </div>
 
     <div class="card">
@@ -2633,10 +2630,54 @@ async function createLiveSessionWithOrder(questionOrder) {
   await attachAdminToSession(code);
 }
 
-el("create-live-btn").onclick = async () => {
-  const questionCount = Math.min(LIVE_QUESTIONS.length, parseInt(el("live-question-count-select").value, 10) || 20);
-  const questionOrder = shuffle(LIVE_QUESTIONS.map((q, i) => i)).slice(0, questionCount);
-  await createLiveSessionWithOrder(questionOrder);
+function normalizeForMatch(s) {
+  return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function matchQuestionsFromPdfText(text) {
+  const normalizedText = normalizeForMatch(text);
+  const matches = [];
+  FULL_QUESTION_BANK.forEach((q, idx) => {
+    const qNorm = normalizeForMatch(q.question);
+    if (!qNorm) return;
+    const pos = normalizedText.indexOf(qNorm);
+    if (pos !== -1) matches.push({ idx, pos });
+  });
+  matches.sort((a, b) => a.pos - b.pos);
+  return matches.map(m => m.idx);
+}
+
+el("live-pdf-create-btn").onclick = async () => {
+  const fileInput = el("live-pdf-upload-input");
+  const statusEl = el("live-pdf-status");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    statusEl.style.color = "var(--wrong)";
+    statusEl.textContent = "Primero elige el PDF del Documento de estudio.";
+    return;
+  }
+  const btn = el("live-pdf-create-btn");
+  btn.disabled = true;
+  statusEl.style.color = "var(--grey)";
+  statusEl.textContent = "Leyendo el PDF…";
+  try {
+    const text = await extractPdfText(file);
+    const questionOrder = matchQuestionsFromPdfText(text);
+    if (!questionOrder.length) {
+      statusEl.style.color = "var(--wrong)";
+      statusEl.textContent = "No reconocí ninguna pregunta del banco CCA-F en este PDF. Asegúrate de subir el PDF generado por \"Documento de estudio\".";
+      return;
+    }
+    statusEl.style.color = "var(--grey)";
+    statusEl.textContent = "Encontré " + questionOrder.length + " preguntas. Creando sesión…";
+    await createLiveSessionWithOrder(questionOrder);
+    statusEl.textContent = "";
+  } catch (e) {
+    statusEl.style.color = "var(--wrong)";
+    statusEl.textContent = "Error al leer el PDF: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 };
 
 el("admin-watch-code-btn").onclick = async () => {
