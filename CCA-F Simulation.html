@@ -1917,7 +1917,19 @@ function startExamTimer(seconds) {
 }
 
 // ---- Plataforma: usuario / navegación / historial ----
-const ADMIN_PIN = "CCAF-ADMIN-2026"; // Solo separa roles dentro del artifact, no es una contraseña con seguridad real.
+async function verifyAdminPin(pin) {
+  try {
+    const resp = await fetch("/api/verify-admin-pin", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pin })
+    });
+    const data = await resp.json().catch(() => ({}));
+    return !!data.ok;
+  } catch (e) {
+    return false;
+  }
+}
 let currentUser = { name: "", email: "", role: "usuario" };
 
 function showScreen(id) {
@@ -1961,7 +1973,8 @@ el("register-btn").onclick = async () => {
   const wantsAdmin = el("role-admin-btn").classList.contains("active");
   if (wantsAdmin) {
     const pin = el("admin-pin-input").value.trim();
-    if (pin !== ADMIN_PIN) {
+    const pinOk = await verifyAdminPin(pin);
+    if (!pinOk) {
       el("admin-pin-error").style.display = "block";
       return;
     }
