@@ -373,20 +373,6 @@
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
   /* ---- Plataforma: registro / menú / historial / admin ---- */
-  .role-row { display: flex; gap: 10px; margin-top: 8px; }
-  .role-option {
-    flex: 1;
-    text-align: center;
-    padding: 12px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-page);
-    color: var(--grey);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-  }
-  .role-option.active { border-color: var(--accent); color: var(--accent); background: var(--bg-card2); }
   .field-error { color: var(--wrong); font-size: 13px; margin-top: 6px; display: none; }
   .login-avatar {
     width: 92px;
@@ -562,16 +548,6 @@
     </div>
     <div class="field-error" id="email-error">Escribe un correo válido para continuar.</div>
     <div style="font-size:12px; color:var(--grey); margin:8px 0 16px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, recuperamos tu nombre automáticamente.</div>
-
-    <div style="margin-bottom:8px; font-weight:bold; font-size:14px;">¿Con qué rol entras?</div>
-    <div class="role-row">
-      <div class="role-option active" id="role-user-btn">Usuario</div>
-      <div class="role-option" id="role-admin-btn">Admin</div>
-    </div>
-    <div id="admin-pin-wrap" class="hidden" style="margin-top:12px;">
-      <input type="text" id="admin-pin-input" placeholder="PIN de Admin">
-      <div class="field-error" id="admin-pin-error">PIN incorrecto. Intenta de nuevo.</div>
-    </div>
 
     <button class="primary" id="register-btn" style="margin-top:18px;">Entrar</button>
   </div>
@@ -1868,19 +1844,6 @@ function startExamTimer(seconds) {
 }
 
 // ---- Plataforma: usuario / navegación / historial ----
-async function verifyAdminPin(pin) {
-  try {
-    const resp = await fetch("/api/verify-admin-pin", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pin })
-    });
-    const data = await resp.json().catch(() => ({}));
-    return !!data.ok;
-  } catch (e) {
-    return false;
-  }
-}
 let currentUser = { name: "", email: "", role: "usuario" };
 
 let screenHistoryReady = false;
@@ -1914,17 +1877,6 @@ window.addEventListener("popstate", (e) => {
   showScreen(targetScreen);
 });
 
-el("role-user-btn").onclick = () => {
-  el("role-user-btn").classList.add("active");
-  el("role-admin-btn").classList.remove("active");
-  el("admin-pin-wrap").classList.add("hidden");
-};
-el("role-admin-btn").onclick = () => {
-  el("role-admin-btn").classList.add("active");
-  el("role-user-btn").classList.remove("active");
-  el("admin-pin-wrap").classList.remove("hidden");
-};
-
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
@@ -1946,22 +1898,15 @@ el("register-btn").onclick = async () => {
     return;
   }
   let name = el("name-input").value.trim();
-  const wantsAdmin = el("role-admin-btn").classList.contains("active");
-  if (wantsAdmin) {
-    const pin = el("admin-pin-input").value.trim();
-    const pinOk = await verifyAdminPin(pin);
-    if (!pinOk) {
-      el("admin-pin-error").style.display = "block";
-      return;
-    }
-  }
-  el("admin-pin-error").style.display = "none";
 
   const existingAccount = await findAccountByEmail(email);
   if (!name && existingAccount) name = existingAccount.name;
   if (!name) { el("name-input").focus(); return; }
 
-  currentUser = { name, email, role: wantsAdmin ? "admin" : "usuario" };
+  // El registro nunca otorga ni quita el rol admin: se conserva el que la cuenta
+  // ya tenía, o se crea como "usuario" si es nueva. Los admins se promueven solo
+  // desde el panel "Gestión de usuarios y roles".
+  currentUser = { name, email, role: existingAccount ? existingAccount.role : "usuario" };
   if (STORAGE_AVAILABLE) {
     try {
       await window.storage.set("account:" + email, JSON.stringify({
@@ -2023,12 +1968,7 @@ el("switch-user-btn").onclick = () => {
   clearSavedSession();
   el("email-input").value = "";
   el("name-input").value = "";
-  el("admin-pin-input").value = "";
   el("email-error").style.display = "none";
-  el("admin-pin-error").style.display = "none";
-  el("role-user-btn").classList.add("active");
-  el("role-admin-btn").classList.remove("active");
-  el("admin-pin-wrap").classList.add("hidden");
   showScreen("screen-register");
 };
 
