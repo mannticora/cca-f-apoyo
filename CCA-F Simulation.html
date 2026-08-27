@@ -743,8 +743,10 @@
 <div id="screen-live-results" class="hidden">
   <div class="score-summary">
     <div style="font-size:16px; color:var(--grey);">Resultado de la sesión en vivo</div>
-    <div class="score-big" id="live-final-score">0 / 20</div>
+    <div class="score-big" id="live-final-score">0 / 1000</div>
+    <div style="font-size:13px; color:var(--grey); margin-bottom:6px;" id="live-final-score-raw">0 de 20 correctas</div>
     <div id="live-grade-badge-container"></div>
+    <div class="cutoff-note">Puntaje mínimo aprobatorio: 720 / 1000 (72%)</div>
   </div>
   <div id="live-answer-review"></div>
   <button class="primary" id="live-pdf-btn" style="margin-top:14px;">Descargar mi PDF de resultados</button>
@@ -783,7 +785,8 @@
 <div id="screen-results" class="hidden">
   <div class="score-summary">
     <div style="font-size:16px; color:var(--grey);">Final score</div>
-    <div class="score-big" id="final-score">0 / 0</div>
+    <div class="score-big" id="final-score">0 / 1000</div>
+    <div style="font-size:13px; color:var(--grey); margin-bottom:6px;" id="final-score-raw">0 of 0 correct</div>
     <div id="grade-badge-container"></div>
     <div class="cutoff-note">Real exam pass mark: 720 / 1000 (72%)</div>
     <div id="domain-breakdown" style="margin-top:18px; text-align:left;"></div>
@@ -1777,6 +1780,9 @@ let quizModuleName = null;
 let examTimerInterval = null;
 let examTimeRemaining = 0;
 const PASS_PCT = 72;
+function scaledScore1000(correct, total) {
+  return total > 0 ? Math.round((correct / total) * 1000) : 0;
+}
 
 function stopExamTimer() {
   if (examTimerInterval) { clearInterval(examTimerInterval); examTimerInterval = null; }
@@ -2252,7 +2258,8 @@ function showResults() {
   clearQuizStateFromLocalStorage();
   el("screen-quiz").classList.add("hidden");
   el("screen-results").classList.remove("hidden");
-  el("final-score").textContent = userScore + " / " + quizQuestions.length;
+  el("final-score").textContent = scaledScore1000(userScore, quizQuestions.length) + " / 1000";
+  el("final-score-raw").textContent = userScore + " of " + quizQuestions.length + " correct";
   const pct = Math.round((userScore / quizQuestions.length) * 100);
   const passed = pct >= PASS_PCT;
   el("grade-badge-container").innerHTML = '<div class="grade-badge ' + (passed ? "pass" : "fail") + '">' + pct + '% \u2014 ' + (passed ? "PASS" : "FAIL") + '</div>';
@@ -2288,6 +2295,7 @@ function generatePdfReport() {
   const doc = new jsPDF();
   const pct = Math.round((userScore / quizQuestions.length) * 100);
   const passed = pct >= PASS_PCT;
+  const scaled = scaledScore1000(userScore, quizQuestions.length);
   const domainRows = Object.keys(perDomainScore)
     .map(code => {
       const s = perDomainScore[code];
@@ -2318,7 +2326,7 @@ function generatePdfReport() {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text("Overall score: " + userScore + " / " + quizQuestions.length + "  (" + pct + "%)", 20, y);
+  doc.text("Overall score: " + scaled + " / 1000  (" + pct + "%, " + userScore + "/" + quizQuestions.length + " correct)", 20, y);
   y += 9;
   doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
   doc.text(passed ? "PASS" : "FAIL", 20, y);
@@ -2399,7 +2407,8 @@ el("pdf-btn").onclick = generatePdfReport;
 el("copy-results-btn").onclick = () => {
   const pct = Math.round((userScore / quizQuestions.length) * 100);
   const grade = pct >= PASS_PCT ? "PASS" : "FAIL";
-  let text = "CCAR-F simulation result\nName: " + userName + "\nScore: " + userScore + " / " + quizQuestions.length + " (" + pct + "%) \u2014 " + grade + "\n";
+  const scaled = scaledScore1000(userScore, quizQuestions.length);
+  let text = "CCAR-F simulation result\nName: " + userName + "\nScore: " + scaled + " / 1000 (" + pct + "%) \u2014 " + grade + " (" + userScore + " / " + quizQuestions.length + " correct)\n";
   Object.keys(perDomainScore).forEach(code => {
     const s = perDomainScore[code];
     if (s.total > 0) text += code + ": " + s.correct + "/" + s.total + "  ";
@@ -3036,7 +3045,8 @@ async function showLiveResults() {
     review.appendChild(box);
   });
   const pct = Math.round((correctCount / total) * 100);
-  el("live-final-score").textContent = correctCount + " / " + total;
+  el("live-final-score").textContent = scaledScore1000(correctCount, total) + " / 1000";
+  el("live-final-score-raw").textContent = correctCount + " de " + total + " correctas";
   const passed = pct >= PASS_PCT;
   el("live-grade-badge-container").innerHTML = '<div class="grade-badge ' + (passed ? "pass" : "fail") + '">' + pct + '% \u2014 ' + (passed ? "PASS" : "FAIL") + '</div>';
   showScreen("screen-live-results");
@@ -3065,7 +3075,7 @@ function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessi
   doc.text("Participante: " + name + "   |   Código de sesión: " + code + "   |   Fecha: " + new Date().toLocaleDateString(), 20, y); y += 14;
   doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
   doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(30, 30, 30);
-  doc.text("Puntaje: " + correctCount + " / " + total + "  (" + pct + "%)", 20, y); y += 9;
+  doc.text("Puntaje: " + scaledScore1000(correctCount, total) + " / 1000  (" + pct + "%, " + correctCount + "/" + total + " correctas)", 20, y); y += 9;
   doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
   doc.text(passed ? "PASS" : "FAIL", 20, y);
   doc.setFontSize(10); doc.setTextColor(120, 120, 120);
@@ -3153,7 +3163,7 @@ el("admin-download-all-pdf-btn").onclick = async () => {
     doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
     doc.text((i + 1) + ". " + p.name, 22, y);
     doc.setTextColor(passed ? 30 : 200, passed ? 140 : 60, passed ? 80 : 50);
-    doc.text(p.correctCount + " / " + total + "  (" + p.pct + "%)  " + (passed ? "PASS" : "FAIL"), 120, y);
+    doc.text(scaledScore1000(p.correctCount, total) + " / 1000  (" + p.pct + "%)  " + (passed ? "PASS" : "FAIL"), 120, y);
     y += 7;
   });
 
