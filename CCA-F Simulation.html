@@ -146,27 +146,30 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   }
-  .email-field-wrap {
+  .icon-field-wrap {
     position: relative;
+    margin-bottom: 14px;
   }
-  .email-field-wrap::before {
-    content: "✉";
+  .icon-field-wrap::before {
+    content: attr(data-icon);
     position: absolute;
     left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 18px;
+    font-size: 17px;
+    line-height: 1;
     color: var(--accent);
     pointer-events: none;
   }
-  .email-field-wrap input[type="email"] {
+  .icon-field-wrap input[type="email"], .icon-field-wrap input[type="text"] {
     padding: 14px 14px 14px 42px;
     font-size: 17px;
     border-radius: 10px;
     border-width: 1.5px;
     background: var(--bg-page);
+    margin-bottom: 0;
   }
-  .email-field-wrap input[type="email"]::placeholder {
+  .icon-field-wrap input::placeholder {
     color: var(--grey-dim);
   }
   button.primary {
@@ -354,6 +357,22 @@
   }
   .role-option.active { border-color: var(--accent); color: var(--accent); background: var(--bg-card2); }
   .field-error { color: var(--wrong); font-size: 13px; margin-top: 6px; display: none; }
+  .login-avatar {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 20%, var(--bg-card2));
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px auto 24px;
+  }
+  .login-avatar svg { width: 44px; height: 44px; fill: var(--accent); }
+  .login-card { max-width: 420px; margin: 0 auto; }
+  .login-footer { text-align: center; font-size: 12px; color: var(--grey); margin-top: 22px; }
+  .login-footer a { color: var(--grey); text-decoration: underline; }
+  .login-footer a:hover { color: var(--accent); }
   .badge-admin { display: inline-block; background: var(--d3); color: #1a1030; font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 20px; margin-left: 8px; vertical-align: middle; }
   .welcome-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .welcome-name { font-size: 15px; }
@@ -500,23 +519,20 @@
 
 <!-- SCREEN 0: REGISTRO -->
 <div id="screen-register" class="hidden">
-  <div class="card">
-    <div class="pill">Paso 1</div>
-    <div style="margin-bottom:10px; font-weight:bold;">Tu correo electrónico</div>
-    <div class="email-field-wrap">
-      <input type="email" id="email-input" placeholder="maria@empresa.com">
+  <div class="login-avatar">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+  </div>
+  <div class="card login-card">
+    <div class="icon-field-wrap" data-icon="👤">
+      <input type="text" id="name-input" placeholder="Tu nombre">
     </div>
-    <div style="font-size:12px; color:var(--grey); margin-top:6px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, recuperamos tu nombre automáticamente.</div>
+    <div class="icon-field-wrap" data-icon="✉">
+      <input type="email" id="email-input" placeholder="tu@correo.com">
+    </div>
     <div class="field-error" id="email-error">Escribe un correo válido para continuar.</div>
-  </div>
-  <div class="card">
-    <div class="pill">Paso 2</div>
-    <div style="margin-bottom:10px; font-weight:bold;">¿Cuál es tu nombre?</div>
-    <input type="text" id="name-input" placeholder="Ej. María">
-  </div>
-  <div class="card">
-    <div class="pill">Paso 3</div>
-    <div style="margin-bottom:10px; font-weight:bold;">¿Con qué rol entras?</div>
+    <div style="font-size:12px; color:var(--grey); margin:8px 0 16px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, recuperamos tu nombre automáticamente.</div>
+
+    <div style="margin-bottom:8px; font-weight:bold; font-size:14px;">¿Con qué rol entras?</div>
     <div class="role-row">
       <div class="role-option active" id="role-user-btn">Usuario</div>
       <div class="role-option" id="role-admin-btn">Admin</div>
@@ -525,8 +541,10 @@
       <input type="text" id="admin-pin-input" placeholder="PIN de Admin">
       <div class="field-error" id="admin-pin-error">PIN incorrecto. Intenta de nuevo.</div>
     </div>
+
+    <button class="primary" id="register-btn" style="margin-top:18px;">Entrar</button>
   </div>
-  <button class="primary" id="register-btn">Entrar</button>
+  <div class="login-footer">CCA-F Simulation · <a href="https://github.com/mannticora" target="_blank" rel="noopener">github.com/mannticora</a></div>
 </div>
 
 <!-- SCREEN MENU: MENÚ PRINCIPAL -->
