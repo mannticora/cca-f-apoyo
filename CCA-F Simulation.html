@@ -794,8 +794,7 @@
     <span id="domain-label">D1 · Agentic Architecture</span>
     <span id="exam-timer-label" style="font-weight:bold;">20:00</span>
   </div>
-  <button class="link-btn" id="toggle-nav-panel-btn" style="margin-bottom:10px;">Ver preguntas respondidas ▾</button>
-  <div id="question-nav-panel" class="question-nav-panel hidden"></div>
+  <div id="question-nav-panel" class="question-nav-panel"></div>
   <div class="scenario-box" id="scenario-text"></div>
   <div class="question-text" id="question-text"></div>
   <div id="options-container"></div>
@@ -2138,8 +2137,6 @@ function startModuleQuiz(domainCode) {
   perDomainScore = {};
   domains.forEach(d => { perDomainScore[d.code] = { correct: 0, total: 0 }; });
   showScreen("screen-quiz");
-  el("question-nav-panel").classList.add("hidden");
-  el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
   renderQuestion();
   persistSession(false);
   stopExamTimer();
@@ -2248,8 +2245,6 @@ el("start-btn").onclick = () => {
   domains.forEach(d => { perDomainScore[d.code] = { correct: 0, total: 0 }; });
   el("screen-setup").classList.add("hidden");
   el("screen-quiz").classList.remove("hidden");
-  el("question-nav-panel").classList.add("hidden");
-  el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
   renderQuestion();
   persistSession(false);
   startExamTimer(20 * 60);
@@ -2298,13 +2293,6 @@ function renderQuestionNavPanel() {
     panel.appendChild(b);
   });
 }
-el("toggle-nav-panel-btn").onclick = () => {
-  const panel = el("question-nav-panel");
-  const showing = !panel.classList.contains("hidden");
-  panel.classList.toggle("hidden", showing);
-  el("toggle-nav-panel-btn").textContent = showing ? "Ver preguntas respondidas ▾" : "Ocultar preguntas respondidas ▴";
-};
-
 function handleOptionClick(idx) {
   if (answered) return; // ya confirmada: revisar, no se puede cambiar
   pendingIdx = idx;
@@ -3315,8 +3303,6 @@ async function initApp() {
     examTimeRemaining = savedQuiz.examTimeRemaining || 0;
 
     showScreen("screen-quiz");
-    el("question-nav-panel").classList.add("hidden");
-    el("toggle-nav-panel-btn").textContent = "Ver preguntas respondidas ▾";
     if (quizMode === "general" && examTimeRemaining > 0) {
       el("exam-timer-label").classList.remove("hidden");
       updateExamTimerLabel();
