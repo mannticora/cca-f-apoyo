@@ -3183,6 +3183,15 @@ async function initApp() {
   if (!savedUser || !savedUser.email) { showScreen("screen-register"); return; }
 
   currentUser = savedUser;
+  // El rol guardado localmente puede quedar desactualizado (ej. una sesión vieja de prueba
+  // marcada como admin en este navegador). La cuenta real en la base de datos siempre manda.
+  if (STORAGE_AVAILABLE) {
+    const freshAccount = await findAccountByEmail(currentUser.email);
+    if (freshAccount && freshAccount.role && freshAccount.role !== currentUser.role) {
+      currentUser.role = freshAccount.role;
+      saveUserToLocalStorage();
+    }
+  }
   renderMenu();
 
   // ¿Había una Sesión en Vivo en curso?
