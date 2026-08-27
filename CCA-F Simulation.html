@@ -1607,8 +1607,17 @@ el("doc-download-pdf-btn").onclick = () => {
 };
 el("doc-create-live-btn").onclick = async () => {
   if (!lastGeneratedDocQuestions || !lastGeneratedDocQuestions.length) return;
-  const questionOrder = lastGeneratedDocQuestions.map(q => FULL_QUESTION_BANK.indexOf(q));
-  await createLiveSessionWithOrder(questionOrder);
+  const btn = el("doc-create-live-btn");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Creando sesión…";
+  try {
+    const questionOrder = lastGeneratedDocQuestions.map(q => FULL_QUESTION_BANK.indexOf(q));
+    await createLiveSessionWithOrder(questionOrder);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 };
 
 const PDF_EXTRACT_TEXT_CAP = 65000; // tope razonable de texto a extraer de un PDF
@@ -2539,7 +2548,8 @@ el("live-pdf-create-btn").onclick = async () => {
     statusEl.style.color = "var(--grey)";
     statusEl.textContent = "Encontré " + questionOrder.length + " preguntas. Creando sesión…";
     await createLiveSessionWithOrder(questionOrder);
-    statusEl.textContent = "";
+    statusEl.style.color = "var(--correct)";
+    statusEl.textContent = "Sesión creada con " + questionOrder.length + " preguntas — el código quedó arriba, en \"Código de sesión\".";
   } catch (e) {
     statusEl.style.color = "var(--wrong)";
     statusEl.textContent = "Error al leer el PDF: " + e.message;
@@ -2571,6 +2581,7 @@ async function attachAdminToSession(code) {
   el("admin-live-code").textContent = code;
   el("admin-monitor-code-label").textContent = code;
   el("admin-created-wrap").classList.remove("hidden");
+  el("admin-created-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
   const startBtn = el("start-live-btn");
   const startedNote = el("admin-live-started-note");
   if (meta && meta.status === "running") {
