@@ -2086,6 +2086,16 @@ async function renderHistory() {
         generateLivePdfFor(currentUser.name, entry.sessionCode || "-", entry.answers, entry.correctas, entry.total, entry.pct, sessionQuestions);
       };
       div.appendChild(btn);
+    } else if (entry.questions && entry.answers) {
+      const btn = document.createElement("button");
+      btn.className = "secondary";
+      btn.style.cssText = "width:100%; margin-top:10px; padding:8px 14px; font-size:13px;";
+      btn.textContent = "Descargar PDF de feedback";
+      btn.onclick = () => {
+        const label = entry.tipo + (entry.modulo ? " · " + entry.modulo : "");
+        generateExamAttemptPdf(currentUser.name, label, entry.answers, entry.correctas, entry.total, entry.pct, entry.questions);
+      };
+      div.appendChild(btn);
     }
     list.appendChild(div);
   });
@@ -2101,7 +2111,9 @@ async function saveHistoryEntry(pct) {
     total: quizQuestions.length,
     correctas: userScore,
     incorrectas: quizQuestions.length - userScore,
-    pct: pct
+    pct: pct,
+    questions: quizQuestions,
+    answers: quizUserAnswers
   };
   try { await window.storage.set("history:" + currentUser.email + ":" + ts, JSON.stringify(entry), false); } catch (e) {}
 }
@@ -3076,17 +3088,19 @@ async function showLiveResults() {
   }
 }
 
-// ---- PDF de resultados Live (individual) ----
-function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessionQuestions) {
+// ---- PDF de feedback detallado (Live y examenes individuales/modulo comparten el mismo formato) ----
+function generateAttemptFeedbackPdf(opts) {
+  var title = opts.title, subtitle = opts.subtitle, filename = opts.filename;
+  var answers = opts.answers, correctCount = opts.correctCount, total = opts.total, pct = opts.pct, questions = opts.questions;
   if (!window.jspdf) { alert("PDF library didn't load \u2014 check your internet connection and try again."); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const passed = pct >= PASS_PCT;
   let y = 20;
   doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(217, 119, 87);
-  doc.text("CCA-F Live Session Report", 20, y); y += 10;
+  doc.text(title, 20, y); y += 10;
   doc.setFontSize(11); doc.setTextColor(90, 90, 90);
-  doc.text("Participante: " + name + "   |   Código de sesión: " + code + "   |   Fecha: " + new Date().toLocaleDateString(), 20, y); y += 14;
+  doc.text(subtitle, 20, y); y += 14;
   doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
   doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(30, 30, 30);
   doc.text("Puntaje: " + scaledScore1000(correctCount, total) + " / 1000  (" + pct + "%, " + correctCount + "/" + total + " correctas)", 20, y); y += 9;
@@ -3096,13 +3110,13 @@ function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessi
   doc.text("(corte real del examen: 72%)", 45, y); y += 14;
   doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 12;
 
-  sessionQuestions.forEach((q, i) => {
+  questions.forEach((q, i) => {
     const ans = answers[i];
     const gotCorrect = ans && ans.correct;
     if (y > 260) { doc.addPage(); y = 20; }
     doc.setFont("helvetica", "bold"); doc.setFontSize(11);
     doc.setTextColor(gotCorrect ? 30 : 200, gotCorrect ? 140 : 60, gotCorrect ? 80 : 50);
-    doc.text("Q" + q.qNum + " \u2014 " + (gotCorrect ? "Correcta" : "Incorrecta"), 20, y); y += 6;
+    doc.text("Q" + (q.qNum || (i + 1)) + " \u2014 " + (gotCorrect ? "Correcta" : "Incorrecta"), 20, y); y += 6;
     doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(40, 40, 40);
     const qLines = doc.splitTextToSize(q.question, 170);
     doc.text(qLines, 20, y); y += qLines.length * 5 + 2;
@@ -3119,7 +3133,25 @@ function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessi
     doc.text(whyLines, 20, y); y += whyLines.length * 4.5 + 8;
   });
 
-  doc.save("CCA-F_Live_" + code + "_" + name.replace(/[^a-z0-9]/gi, "_") + ".pdf");
+  doc.save(filename);
+}
+
+function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessionQuestions) {
+  generateAttemptFeedbackPdf({
+    title: "CCA-F Live Session Report",
+    subtitle: "Participante: " + name + "   |   Código de sesión: " + code + "   |   Fecha: " + new Date().toLocaleDateString(),
+    filename: "CCA-F_Live_" + code + "_" + name.replace(/[^a-z0-9]/gi, "_") + ".pdf",
+    answers: answers, correctCount: correctCount, total: total, pct: pct, questions: sessionQuestions
+  });
+}
+
+function generateExamAttemptPdf(name, label, answers, correctCount, total, pct, questions) {
+  generateAttemptFeedbackPdf({
+    title: "CCA-F Simulation \u2014 Feedback detallado",
+    subtitle: "Participante: " + name + "   |   " + label + "   |   Fecha: " + new Date().toLocaleDateString(),
+    filename: "CCA-F_Feedback_" + name.replace(/[^a-z0-9]/gi, "_") + ".pdf",
+    answers: answers, correctCount: correctCount, total: total, pct: pct, questions: questions
+  });
 }
 
 el("live-pdf-btn").onclick = () => {
