@@ -603,7 +603,6 @@
 <div id="screen-history" class="hidden">
   <h2>Mi historial</h2>
   <div id="history-list"></div>
-  <button class="secondary" id="back-from-history-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
 </div>
 
 <!-- SCREEN MODULES: SELECCIÓN DE MÓDULO -->
@@ -611,7 +610,6 @@
   <h2>Elige un módulo</h2>
   <div style="font-size:13px; color:var(--grey); margin-bottom:16px;">Cada módulo incluye todas las preguntas disponibles de ese dominio en el banco actual.</div>
   <div class="menu-grid" id="modules-list"></div>
-  <button class="secondary" id="back-from-modules-btn" style="width:100%; margin-top:14px;">Volver al menú</button>
 </div>
 
 <!-- SCREEN ADMIN CREATE: CREAR SESIÓN LIVE -->
@@ -726,7 +724,6 @@
     <button class="primary" id="admin-download-all-pdf-btn" style="margin-top:16px;">Descargar PDF de todos los participantes</button>
   </div>
 
-  <button class="secondary" id="back-from-admin-create-btn" style="width:100%; margin-top:14px;">Volver al menú</button>
 </div>
 
 <div id="screen-live-join" class="hidden">
@@ -737,7 +734,6 @@
     <div class="field-error" id="live-join-error">No encontramos esa sesión. Verifica el código con tu Admin.</div>
   </div>
   <button class="primary" id="join-live-btn">Unirme</button>
-  <button class="secondary" id="back-from-live-join-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
 </div>
 
 <!-- SCREEN LIVE WAIT: SALA DE ESPERA -->
@@ -771,7 +767,6 @@
   </div>
   <div id="live-answer-review"></div>
   <button class="primary" id="live-pdf-btn" style="margin-top:14px;">Descargar mi PDF de resultados</button>
-  <button class="secondary" id="live-back-to-menu-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
 </div>
 
 <!-- SCREEN 1: SETUP (motor del Examen General) -->
@@ -782,7 +777,6 @@
     <div style="font-size:14px; color:var(--grey); margin-top:6px;">25 preguntas en el formato real del examen, uno de los 5 dominios de la certificación, mezcladas y presentadas en orden aleatorio — igual que una simulación real de examen.</div>
   </div>
   <button class="primary" id="start-btn">Iniciar examen general</button>
-  <button class="secondary" id="back-from-setup-btn" style="margin-top:10px; width:100%;">Volver al menú</button>
   <button class="secondary" id="monitor-btn" style="margin-top:10px; width:100%; display:none;">Live monitor (for instructors)</button>
 </div>
 
@@ -816,7 +810,6 @@
   <button class="primary" id="pdf-btn" style="margin-bottom:10px;">Download PDF study report</button>
   <button class="secondary" id="restart-btn" style="width:100%;">Take another simulation</button>
   <button class="secondary" id="copy-results-btn" style="width:100%; margin-top:10px;">Copy my results to share</button>
-  <button class="secondary" id="back-to-menu-btn" style="width:100%; margin-top:10px;">Volver al menú</button>
 </div>
 
 <!-- SCREEN 4: LIVE MONITOR -->
@@ -1940,7 +1933,16 @@ let currentUser = { name: "", email: "", role: "usuario" };
 
 let screenHistoryReady = false;
 let isPopNavigation = false;
+let currentScreenId = null;
+const SCREEN_LEAVE_HOOKS = {
+  "screen-admin-create": () => { stopAdminPolling(); hideLiveSessionTimer(); },
+  "screen-live-results": () => { hideLiveSessionTimer(); currentLiveCode = null; },
+};
 function showScreen(id) {
+  if (currentScreenId && currentScreenId !== id && SCREEN_LEAVE_HOOKS[currentScreenId]) {
+    SCREEN_LEAVE_HOOKS[currentScreenId]();
+  }
+  currentScreenId = id;
   ["screen-firebase-config","screen-register","screen-menu","screen-history","screen-modules","screen-admin-create","screen-live-join","screen-live-wait","screen-live-quiz","screen-live-results","screen-setup","screen-quiz","screen-results","screen-monitor"].forEach(s => {
     el(s).classList.toggle("hidden", s !== id);
   });
@@ -2086,14 +2088,12 @@ el("menu-async-btn").onclick = () => {
 };
 
 el("menu-modules-btn").onclick = () => { renderModulesList(); showScreen("screen-modules"); };
-el("back-from-modules-btn").onclick = () => showScreen("screen-menu");
 
 el("menu-live-btn").onclick = () => {
   el("live-code-input").value = "";
   el("live-join-error").style.display = "none";
   showScreen("screen-live-join");
 };
-el("back-from-live-join-btn").onclick = () => showScreen("screen-menu");
 
 el("menu-admin-panel-btn").onclick = () => {
   el("admin-created-wrap").classList.add("hidden");
@@ -2103,11 +2103,6 @@ el("menu-admin-panel-btn").onclick = () => {
   showScreen("screen-admin-create");
   renderRecentSessions();
   renderAdminUsers();
-};
-el("back-from-admin-create-btn").onclick = () => {
-  stopAdminPolling();
-  hideLiveSessionTimer();
-  showScreen("screen-menu");
 };
 
 function renderModulesList() {
@@ -2142,11 +2137,7 @@ function startModuleQuiz(domainCode) {
   stopExamTimer();
   el("exam-timer-label").classList.add("hidden");
 }
-el("back-from-setup-btn").onclick = () => showScreen("screen-menu");
-el("back-to-menu-btn").onclick = () => showScreen("screen-menu");
-
 el("menu-history-btn").onclick = () => { renderHistory(); showScreen("screen-history"); };
-el("back-from-history-btn").onclick = () => showScreen("screen-menu");
 
 function historyBarColor(pct) {
   if (pct >= PASS_PCT) return "var(--correct)";
@@ -3078,12 +3069,6 @@ async function showLiveResults() {
     try { await window.storage.set("history:" + currentUser.email + ":" + ts, JSON.stringify(entry), false); } catch (e) {}
   }
 }
-
-el("live-back-to-menu-btn").onclick = () => {
-  hideLiveSessionTimer();
-  currentLiveCode = null;
-  showScreen("screen-menu");
-};
 
 // ---- PDF de resultados Live (individual) ----
 function generateLivePdfFor(name, code, answers, correctCount, total, pct, sessionQuestions) {
