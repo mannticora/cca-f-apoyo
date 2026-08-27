@@ -656,6 +656,10 @@
       <div style="font-size:12px; color:var(--grey); margin:10px 0 14px;">Genera un documento con preguntas de práctica de los 5 dominios (mezcladas y balanceadas), incluyendo la respuesta correcta y su explicación.</div>
       <button class="primary" id="doc-download-md-btn">Descargar Markdown (.md)</button>
       <button class="secondary" id="doc-download-pdf-btn" style="margin-top:8px;">Descargar PDF</button>
+      <div id="doc-create-live-wrap" class="hidden" style="margin-top:14px;">
+        <div style="font-size:12px; color:var(--grey); margin-bottom:8px;">Crea una sesión en vivo con exactamente las mismas preguntas que acabas de descargar (usa la duración de "Crear nueva sesión").</div>
+        <button class="secondary" id="doc-create-live-btn" style="width:100%;">Crear sesión en vivo con estas preguntas</button>
+      </div>
     </div>
 
     <div class="card admin-grid-wide">
@@ -1612,13 +1616,25 @@ function getSelectedDocQuestions() {
   return pickBalancedQuestions(count);
 }
 
+let lastGeneratedDocQuestions = null;
+function markDocQuestionsGenerated(qs) {
+  lastGeneratedDocQuestions = qs;
+  el("doc-create-live-wrap").classList.remove("hidden");
+}
 el("doc-download-md-btn").onclick = () => {
   const qs = getSelectedDocQuestions();
+  markDocQuestionsGenerated(qs);
   downloadTextFile("CCA-F_Documento_Estudio_" + qs.length + "preguntas.md", buildStudyMarkdown(qs), "text/markdown");
 };
 el("doc-download-pdf-btn").onclick = () => {
   const qs = getSelectedDocQuestions();
+  markDocQuestionsGenerated(qs);
   buildStudyPdf(qs);
+};
+el("doc-create-live-btn").onclick = async () => {
+  if (!lastGeneratedDocQuestions || !lastGeneratedDocQuestions.length) return;
+  const questionOrder = lastGeneratedDocQuestions.map(q => FULL_QUESTION_BANK.indexOf(q));
+  await createLiveSessionWithOrder(questionOrder);
 };
 
 // ---- Generar preguntas desde un PDF (Admin) ----
@@ -2604,19 +2620,23 @@ function stopLiveQuizPolling() {
 }
 
 // ---- Admin: crear, encontrar y monitorear sesiones (cualquier Admin puede ver cualquier sesión) ----
-el("create-live-btn").onclick = async () => {
+async function createLiveSessionWithOrder(questionOrder) {
   if (!STORAGE_AVAILABLE) { alert("El almacenamiento no está disponible ahora mismo."); return; }
   const code = genLiveCode();
-  const questionCount = Math.min(LIVE_QUESTIONS.length, parseInt(el("live-question-count-select").value, 10) || 20);
   const totalSeconds = (parseInt(el("live-duration-select").value, 10) || 25) * 60;
-  const questionOrder = shuffle(LIVE_QUESTIONS.map((q, i) => i)).slice(0, questionCount);
   const meta = {
     code, status: "waiting", startTime: null,
     createdBy: currentUser.name, createdAt: Date.now(),
-    totalQuestions: questionCount, totalSeconds, questionOrder
+    totalQuestions: questionOrder.length, totalSeconds, questionOrder
   };
   try { await window.storage.set("live:" + code + ":meta", JSON.stringify(meta), true); } catch (e) {}
   await attachAdminToSession(code);
+}
+
+el("create-live-btn").onclick = async () => {
+  const questionCount = Math.min(LIVE_QUESTIONS.length, parseInt(el("live-question-count-select").value, 10) || 20);
+  const questionOrder = shuffle(LIVE_QUESTIONS.map((q, i) => i)).slice(0, questionCount);
+  await createLiveSessionWithOrder(questionOrder);
 };
 
 el("admin-watch-code-btn").onclick = async () => {
