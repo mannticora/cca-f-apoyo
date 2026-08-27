@@ -691,7 +691,13 @@
 
     <div class="card">
       <div class="pill">Sesiones recientes</div>
-      <div id="admin-recent-sessions-list" style="font-size:14px; color:var(--grey);"><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">UUHTP</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">W4KVM</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">P9HMN</strong> · 20 preguntas · En curso · creada por Sofia</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">H589T</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">HUY5A</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">YT4UP</strong> · 20 preguntas · En curso · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">K8WH8</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; border-bottom: 1px solid var(--border);"><span><strong style="color:var(--black);">7E5U7</strong> · 20 preguntas · Esperando · creada por Ricardo</span><button class="secondary" style="width: auto; padding: 6px 14px; font-size: 13px;">Monitorear</button></div></div>
+      <div id="admin-recent-sessions-list" style="font-size:14px; color:var(--grey);"></div>
+    </div>
+
+    <div class="card admin-grid-wide">
+      <div class="pill">Gestión de usuarios y roles</div>
+      <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Cuentas registradas y su rol actual. Usa esto para quitar el rol Admin a cualquier cuenta que lo tenga sin haber usado el PIN correcto.</div>
+      <div id="admin-users-list" style="font-size:14px; color:var(--grey);"></div>
     </div>
   </div>
 
@@ -2080,6 +2086,7 @@ el("menu-admin-panel-btn").onclick = () => {
   currentLiveCode = null;
   showScreen("screen-admin-create");
   renderRecentSessions();
+  renderAdminUsers();
 };
 el("back-from-admin-create-btn").onclick = () => {
   stopAdminPolling();
@@ -2682,6 +2689,62 @@ async function renderRecentSessions() {
     btn.textContent = "Monitorear";
     btn.style.cssText = "width:auto; padding:6px 14px; font-size:13px;";
     btn.onclick = () => attachAdminToSession(m.code);
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+async function setAccountRole(email, role) {
+  const account = await findAccountByEmail(email);
+  if (!account) return;
+  account.role = role;
+  await window.storage.set("account:" + email, JSON.stringify(account), true);
+  if (email === currentUser.email) {
+    currentUser.role = role;
+    saveUserToLocalStorage();
+    renderMenu();
+  }
+}
+
+async function renderAdminUsers() {
+  const wrap = el("admin-users-list");
+  if (!STORAGE_AVAILABLE) { wrap.textContent = "No disponible."; return; }
+  wrap.textContent = "Cargando...";
+  let keys;
+  try {
+    keys = await window.storage.list("account:", true);
+  } catch (e) { keys = null; }
+  const accountKeys = (keys && keys.keys) ? keys.keys : [];
+  const accounts = [];
+  for (const k of accountKeys) {
+    try {
+      const r = await window.storage.get(k, true);
+      if (r && r.value) accounts.push(JSON.parse(r.value));
+    } catch (e) {}
+  }
+  if (!accounts.length) { wrap.textContent = "Todavía no hay cuentas registradas."; return; }
+  accounts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  wrap.innerHTML = "";
+  accounts.forEach(acc => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); gap:10px;";
+    const isAdmin = acc.role === "admin";
+    const label = document.createElement("span");
+    const nameEl = document.createElement("strong");
+    nameEl.style.color = "var(--black)";
+    nameEl.textContent = acc.name || "?";
+    label.appendChild(nameEl);
+    label.appendChild(document.createTextNode(" · " + acc.email + " · " + (isAdmin ? "Admin" : "Usuario")));
+    const btn = document.createElement("button");
+    btn.className = "secondary";
+    btn.style.cssText = "width:auto; padding:6px 14px; font-size:13px;";
+    btn.textContent = isAdmin ? "Quitar admin" : "Hacer admin";
+    btn.onclick = async () => {
+      btn.disabled = true;
+      await setAccountRole(acc.email, isAdmin ? "usuario" : "admin");
+      renderAdminUsers();
+    };
+    row.appendChild(label);
     row.appendChild(btn);
     wrap.appendChild(row);
   });
