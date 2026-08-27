@@ -1939,11 +1939,27 @@ async function verifyAdminPin(pin) {
 }
 let currentUser = { name: "", email: "", role: "usuario" };
 
+let screenHistoryReady = false;
+let isPopNavigation = false;
 function showScreen(id) {
   ["screen-firebase-config","screen-register","screen-menu","screen-history","screen-modules","screen-admin-create","screen-live-join","screen-live-wait","screen-live-quiz","screen-live-results","screen-setup","screen-quiz","screen-results","screen-monitor"].forEach(s => {
     el(s).classList.toggle("hidden", s !== id);
   });
+  if (isPopNavigation) {
+    isPopNavigation = false;
+  } else if (!screenHistoryReady) {
+    screenHistoryReady = true;
+    history.replaceState({ screen: id }, "");
+  } else if (!history.state || history.state.screen !== id) {
+    history.pushState({ screen: id }, "");
+  }
 }
+
+window.addEventListener("popstate", (e) => {
+  const targetScreen = (e.state && e.state.screen) || "screen-register";
+  isPopNavigation = true;
+  showScreen(targetScreen);
+});
 
 el("role-user-btn").onclick = () => {
   el("role-user-btn").classList.add("active");
