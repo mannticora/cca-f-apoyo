@@ -2076,6 +2076,17 @@ async function renderHistory() {
       '<div class="history-top"><span class="history-type">' + entry.tipo + (entry.modulo ? " &middot; " + entry.modulo : "") + '</span><span class="history-date">' + dateStr + '</span></div>' +
       '<div class="history-bar-track"><div class="history-bar-fill" style="width:' + entry.pct + '%; background:' + color + ';"></div></div>' +
       '<div class="history-bottom"><span>' + entry.correctas + ' correctas / ' + entry.incorrectas + ' incorrectas &middot; ' + entry.total + ' preguntas</span><span class="history-score" style="color:' + color + ';">' + entry.pct + '%</span></div>';
+    if (entry.tipo === "Live" && entry.questionOrder && entry.answers) {
+      const btn = document.createElement("button");
+      btn.className = "secondary";
+      btn.style.cssText = "width:100%; margin-top:10px; padding:8px 14px; font-size:13px;";
+      btn.textContent = "Descargar PDF de esta sesión";
+      btn.onclick = () => {
+        const sessionQuestions = entry.questionOrder.map(i => LIVE_QUESTIONS[i]);
+        generateLivePdfFor(currentUser.name, entry.sessionCode || "-", entry.answers, entry.correctas, entry.total, entry.pct, sessionQuestions);
+      };
+      div.appendChild(btn);
+    }
     list.appendChild(div);
   });
 }
@@ -2489,6 +2500,7 @@ let liveCurrentQIndex = -1;
 let liveAnsweredThisQ = false;
 let liveMyStartTime = null;
 let liveSessionQuestions = LIVE_QUESTIONS;
+let liveSessionQuestionOrder = LIVE_QUESTIONS.map((q, i) => i);
 const LIVE_SESSION_TOTAL_SEC = 25 * 60;
 let liveSessionTotalSec = LIVE_SESSION_TOTAL_SEC;
 let livePendingIdx = null;
@@ -2853,6 +2865,7 @@ async function enterLiveQuiz() {
     meta = JSON.parse(r.value);
   } catch (e) { meta = null; }
   const order = (meta && meta.questionOrder && meta.questionOrder.length) ? meta.questionOrder : LIVE_QUESTIONS.map((q, i) => i);
+  liveSessionQuestionOrder = order;
   liveSessionQuestions = order.map(i => LIVE_QUESTIONS[i]);
   liveSessionTotalSec = (meta && meta.totalSeconds) ? meta.totalSeconds : LIVE_SESSION_TOTAL_SEC;
 
@@ -3056,7 +3069,8 @@ async function showLiveResults() {
     const ts = Date.now();
     const entry = {
       tipo: "Live", modulo: null, timestamp: ts, total: total,
-      correctas: correctCount, incorrectas: total - correctCount, pct: pct
+      correctas: correctCount, incorrectas: total - correctCount, pct: pct,
+      sessionCode: currentLiveCode, questionOrder: liveSessionQuestionOrder.slice(), answers: p.answers
     };
     try { await window.storage.set("history:" + currentUser.email + ":" + ts, JSON.stringify(entry), false); } catch (e) {}
   }
