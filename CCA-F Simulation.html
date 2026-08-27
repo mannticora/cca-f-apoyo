@@ -265,6 +265,36 @@
   }
   .question-nav-btn.nav-answered { border-color: var(--correct); color: var(--correct); background: var(--correct-tint); }
   .question-nav-btn.nav-current { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* ---- Dashboard de estudiantes ---- */
+  .dash-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .dash-kpi-tile { background: var(--bg-page); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .dash-kpi-label { font-size: 12px; color: var(--grey); margin-bottom: 6px; }
+  .dash-kpi-value { font-size: 26px; font-weight: bold; color: var(--black); }
+  .dash-section-title { font-size: 13px; font-weight: bold; color: var(--black); margin: 4px 0 12px; }
+  .dash-bar-chart { display: flex; flex-direction: column; gap: 8px; }
+  .dash-bar-row { display: grid; grid-template-columns: 130px 1fr 46px; align-items: center; gap: 10px; }
+  .dash-bar-label { font-size: 12px; color: var(--grey); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dash-bar-track { position: relative; height: 18px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 4px; }
+  .dash-bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 0 4px 4px 0; cursor: pointer; }
+  .dash-bar-fill:hover, .dash-bar-fill:focus { filter: brightness(1.12); outline: none; }
+  .dash-bar-refline { position: absolute; top: -1px; bottom: -1px; width: 0; border-left: 1px dashed var(--grey); opacity: 0.7; }
+  .dash-bar-value { font-size: 12px; color: var(--black); text-align: right; font-variant-numeric: tabular-nums; }
+  .dash-chart-caption { font-size: 11px; color: var(--grey); margin-top: 8px; }
+  .dash-stack-track { display: flex; height: 22px; border-radius: 6px; overflow: hidden; gap: 2px; }
+  .dash-stack-seg { height: 100%; cursor: pointer; }
+  .dash-stack-seg:hover, .dash-stack-seg:focus { filter: brightness(1.12); outline: none; }
+  .dash-legend { display: flex; gap: 18px; margin-top: 10px; font-size: 12px; color: var(--grey); flex-wrap: wrap; }
+  .dash-legend-item { display: flex; align-items: center; gap: 6px; }
+  .dash-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .dash-tooltip {
+    position: fixed; z-index: 60; background: var(--bg-card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 11px; font-size: 12px; color: var(--black);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.28); pointer-events: none; display: none; max-width: 230px;
+  }
+  .dash-tooltip .dash-tooltip-name { font-weight: bold; color: var(--black); margin-bottom: 3px; }
+  .dash-tooltip .dash-tooltip-row { color: var(--grey); }
+  .dash-tooltip .dash-tooltip-row strong { color: var(--black); font-weight: bold; }
   .offline-banner {
     position: fixed;
     inset: 0;
@@ -683,6 +713,7 @@
       <div id="admin-dashboard-wrap" style="font-size:14px; color:var(--grey);"></div>
     </div>
   </div>
+  <div id="dash-tooltip" class="dash-tooltip"></div>
 
   <div id="admin-created-wrap" class="hidden" style="margin-top:20px;">
     <div class="card" style="text-align:center;">
@@ -2759,7 +2790,6 @@ async function renderStudentsDashboard() {
       if (r && r.value) accounts.push(JSON.parse(r.value));
     } catch (e) {}
   }
-  if (!accounts.length) { wrap.textContent = "Todavía no hay cuentas registradas."; return; }
 
   let historyKeys;
   try { historyKeys = await window.storage.listRaw("personal__"); } catch (e) { historyKeys = []; }
@@ -2782,29 +2812,234 @@ async function renderStudentsDashboard() {
     s.last = Math.max(s.last, entry.timestamp || 0);
   }
 
-  accounts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   wrap.innerHTML = "";
+
+  // Solo estudiantes que ya presentaron al menos un intento.
+  const active = accounts
+    .filter(acc => statsByEmail[acc.email] && statsByEmail[acc.email].attempts > 0)
+    .map(acc => {
+      const s = statsByEmail[acc.email];
+      return Object.assign({}, acc, s, { avg: Math.round(s.pctSum / s.attempts) });
+    });
+
+  if (!active.length) {
+    wrap.textContent = "Todavia ningun estudiante ha presentado un examen.";
+    return;
+  }
+  active.sort((a, b) => b.avg - a.avg);
+
+  // ---- KPIs ----
+  const totalAttempts = active.reduce((sum, s) => sum + s.attempts, 0);
+  const overallAvg = Math.round(active.reduce((sum, s) => sum + s.avg, 0) / active.length);
+  const passedCount = active.filter(s => s.avg >= PASS_PCT).length;
+  const failedCount = active.length - passedCount;
+  const passRate = Math.round((passedCount / active.length) * 100);
+
+  const kpiRow = document.createElement("div");
+  kpiRow.className = "dash-kpi-row";
+  [
+    ["Estudiantes activos", String(active.length)],
+    ["Intentos totales", String(totalAttempts)],
+    ["Promedio general", overallAvg + "%"],
+    ["Tasa de aprobacion", passRate + "%"]
+  ].forEach(pair => {
+    const tile = document.createElement("div");
+    tile.className = "dash-kpi-tile";
+    const labelEl = document.createElement("div");
+    labelEl.className = "dash-kpi-label";
+    labelEl.textContent = pair[0];
+    const valueEl = document.createElement("div");
+    valueEl.className = "dash-kpi-value";
+    valueEl.textContent = pair[1];
+    tile.appendChild(labelEl);
+    tile.appendChild(valueEl);
+    kpiRow.appendChild(tile);
+  });
+  wrap.appendChild(kpiRow);
+
+  // ---- Tooltip compartido ----
+  const tooltip = el("dash-tooltip");
+  function setTooltipContent(name, rows) {
+    tooltip.innerHTML = "";
+    const n = document.createElement("div");
+    n.className = "dash-tooltip-name";
+    n.textContent = name;
+    tooltip.appendChild(n);
+    rows.forEach(pair => {
+      const row = document.createElement("div");
+      row.className = "dash-tooltip-row";
+      const strong = document.createElement("strong");
+      strong.textContent = pair[1] + "  ";
+      row.appendChild(strong);
+      row.appendChild(document.createTextNode(pair[0]));
+      tooltip.appendChild(row);
+    });
+  }
+  function positionTooltip(evt) {
+    const pad = 14;
+    let x = evt.clientX + pad, y = evt.clientY + pad;
+    if (x + 230 > window.innerWidth) x = evt.clientX - 230 - pad;
+    if (y + 110 > window.innerHeight) y = evt.clientY - 110 - pad;
+    tooltip.style.left = x + "px";
+    tooltip.style.top = y + "px";
+  }
+  function showTooltipAt(evt, name, rows) {
+    setTooltipContent(name, rows);
+    tooltip.style.display = "block";
+    positionTooltip(evt);
+  }
+  function hideTooltip() { tooltip.style.display = "none"; }
+
+  // ---- Ranking: promedio por estudiante ----
+  const barTitle = document.createElement("div");
+  barTitle.className = "dash-section-title";
+  barTitle.textContent = "Promedio por estudiante";
+  wrap.appendChild(barTitle);
+
+  const barChart = document.createElement("div");
+  barChart.className = "dash-bar-chart";
+  active.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "dash-bar-row";
+
+    const label = document.createElement("div");
+    label.className = "dash-bar-label";
+    label.textContent = s.name || s.email;
+    label.title = s.email;
+
+    const track = document.createElement("div");
+    track.className = "dash-bar-track";
+
+    const refline = document.createElement("div");
+    refline.className = "dash-bar-refline";
+    refline.style.left = PASS_PCT + "%";
+    track.appendChild(refline);
+
+    const fill = document.createElement("div");
+    fill.className = "dash-bar-fill";
+    fill.style.width = Math.max(2, s.avg) + "%";
+    fill.style.background = s.avg >= PASS_PCT ? "var(--correct)" : "var(--wrong)";
+    fill.tabIndex = 0;
+    fill.setAttribute("role", "img");
+    fill.setAttribute("aria-label", (s.name || s.email) + ": " + s.avg + "%");
+    const rows = [
+      ["Promedio", s.avg + "%"],
+      ["Mejor intento", s.best + "%"],
+      ["Intentos", String(s.attempts)],
+      ["Ultimo intento", s.last ? new Date(s.last).toLocaleDateString() : "-"]
+    ];
+    const onShow = evt => showTooltipAt(evt, s.name || s.email, rows);
+    fill.onpointerenter = onShow;
+    fill.onpointermove = onShow;
+    fill.onpointerleave = hideTooltip;
+    fill.onfocus = onShow;
+    fill.onblur = hideTooltip;
+    track.appendChild(fill);
+
+    const value = document.createElement("div");
+    value.className = "dash-bar-value";
+    value.textContent = s.avg + "%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    barChart.appendChild(row);
+  });
+  wrap.appendChild(barChart);
+
+  const caption = document.createElement("div");
+  caption.className = "dash-chart-caption";
+  caption.textContent = "Linea punteada: corte de aprobacion (" + PASS_PCT + "%). Verde = aprobado, rojo = no aprobado.";
+  wrap.appendChild(caption);
+
+  // ---- Aprobados vs. no aprobados ----
+  const stackTitle = document.createElement("div");
+  stackTitle.className = "dash-section-title";
+  stackTitle.style.marginTop = "22px";
+  stackTitle.textContent = "Aprobados vs. no aprobados";
+  wrap.appendChild(stackTitle);
+
+  const stackTrack = document.createElement("div");
+  stackTrack.className = "dash-stack-track";
+  if (passedCount > 0) {
+    const seg = document.createElement("div");
+    seg.className = "dash-stack-seg";
+    seg.style.background = "var(--correct)";
+    seg.style.width = Math.round((passedCount / active.length) * 100) + "%";
+    seg.tabIndex = 0;
+    const onShow = evt => showTooltipAt(evt, "Aprobados", [["Estudiantes", String(passedCount)]]);
+    seg.onpointerenter = onShow;
+    seg.onpointermove = onShow;
+    seg.onpointerleave = hideTooltip;
+    seg.onfocus = onShow;
+    seg.onblur = hideTooltip;
+    stackTrack.appendChild(seg);
+  }
+  if (failedCount > 0) {
+    const seg = document.createElement("div");
+    seg.className = "dash-stack-seg";
+    seg.style.background = "var(--wrong)";
+    seg.style.width = Math.round((failedCount / active.length) * 100) + "%";
+    seg.tabIndex = 0;
+    const onShow = evt => showTooltipAt(evt, "No aprobados", [["Estudiantes", String(failedCount)]]);
+    seg.onpointerenter = onShow;
+    seg.onpointermove = onShow;
+    seg.onpointerleave = hideTooltip;
+    seg.onfocus = onShow;
+    seg.onblur = hideTooltip;
+    stackTrack.appendChild(seg);
+  }
+  wrap.appendChild(stackTrack);
+
+  const legend = document.createElement("div");
+  legend.className = "dash-legend";
+  [
+    ["Aprobados (" + passedCount + ")", "var(--correct)"],
+    ["No aprobados (" + failedCount + ")", "var(--wrong)"]
+  ].forEach(pair => {
+    const item = document.createElement("div");
+    item.className = "dash-legend-item";
+    const dot = document.createElement("div");
+    dot.className = "dash-legend-dot";
+    dot.style.background = pair[1];
+    const text = document.createElement("span");
+    text.textContent = pair[0];
+    item.appendChild(dot);
+    item.appendChild(text);
+    legend.appendChild(item);
+  });
+  wrap.appendChild(legend);
+
+  // ---- Tabla detallada (vista accesible, siempre disponible) ----
+  const tableTitle = document.createElement("div");
+  tableTitle.className = "dash-section-title";
+  tableTitle.style.marginTop = "22px";
+  tableTitle.textContent = "Detalle";
+  wrap.appendChild(tableTitle);
+
   const table = document.createElement("table");
   table.className = "monitor-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Intentos</th><th>Promedio</th><th>Mejor</th><th>Último intento</th></tr>";
+  const headRow = document.createElement("tr");
+  ["Nombre", "Correo", "Rol", "Intentos", "Promedio", "Mejor", "Ultimo intento"].forEach(h => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
-  accounts.forEach(acc => {
-    const s = statsByEmail[acc.email];
-    const attempts = s ? s.attempts : 0;
-    const avg = s && s.attempts ? Math.round(s.pctSum / s.attempts) : 0;
-    const best = s ? s.best : 0;
-    const lastStr = s && s.last ? new Date(s.last).toLocaleDateString() : "—";
+  active.forEach(s => {
     const row = document.createElement("tr");
-    row.innerHTML =
-      "<td>" + (acc.name || "?") + "</td>" +
-      "<td>" + acc.email + "</td>" +
-      "<td>" + (acc.role === "admin" ? "Admin" : "Usuario") + "</td>" +
-      "<td>" + attempts + "</td>" +
-      "<td>" + (attempts ? avg + "%" : "—") + "</td>" +
-      "<td>" + (attempts ? best + "%" : "—") + "</td>" +
-      "<td>" + lastStr + "</td>";
+    [
+      s.name || "?", s.email, s.role === "admin" ? "Admin" : "Usuario",
+      String(s.attempts), s.avg + "%", s.best + "%",
+      s.last ? new Date(s.last).toLocaleDateString() : "-"
+    ].forEach(v => {
+      const td = document.createElement("td");
+      td.textContent = v;
+      row.appendChild(td);
+    });
     tbody.appendChild(row);
   });
   table.appendChild(tbody);
