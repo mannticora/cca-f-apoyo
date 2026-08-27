@@ -1,3 +1,4 @@
 *.download.tmp
 .wrangler/
 .dev.vars
+migration_data*.sql
