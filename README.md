@@ -4,7 +4,7 @@ Simulador de práctica para el examen **Claude Certified Architect (CCA-F)**, he
 
 **En vivo:** https://cca-f-apoyo.pages.dev
 
-*(Sitio anterior en Azure Static Web Apps, sin la función de generar preguntas desde PDF: https://purple-sand-0a77d3110.7.azurestaticapps.net — se quedó sin crédito de Azure for Students, ver sección "Despliegue".)*
+*(Sitio anterior en Azure Static Web Apps: https://purple-sand-0a77d3110.7.azurestaticapps.net — se quedó sin crédito de Azure for Students, ver sección "Despliegue".)*
 
 ## Qué hace
 
@@ -16,10 +16,10 @@ Simulador de práctica para el examen **Claude Certified Architect (CCA-F)**, he
 - **Unirse a una sesión Live**: con un código de 5 letras que comparte un Admin.
 
 ### Para el Admin (panel `Panel Admin` en el menú)
-- **Crear sesión Live**: elige número de preguntas (5/10/15/20) y duración por persona; genera un código de sesión para compartir con el grupo. Cada participante avanza a su propio ritmo (no es sincronizado), sin ver si acertó hasta el final.
+- **Documento de estudio**: genera y descarga un documento (Markdown o PDF) con N preguntas (5 hasta "todas las disponibles") tomadas del banco completo, repartidas proporcionalmente entre los 5 dominios, incluyendo la respuesta correcta y su explicación — útil para imprimir o repasar offline. Justo después de generarlo aparece un botón para crear una sesión Live con ese mismo conjunto de preguntas.
+- **Crear sesión Live**: elige duración por persona y sube el PDF del Documento de estudio — el navegador vuelve a extraer su texto y empareja cada pregunta contra el banco de 97 para crear la sesión con exactamente esas preguntas, en ese orden. Genera un código de sesión para compartir con el grupo. Cada participante avanza a su propio ritmo (no es sincronizado), sin ver si acertó hasta el final.
 - **Monitorear sesiones**: progreso en tiempo real de cada participante (aciertos, % completado, tiempo restante), con descarga de PDF grupal.
-- **Documento de estudio**: genera y descarga un documento (Markdown o PDF) con N preguntas (5 hasta "todas las disponibles") tomadas del banco completo, repartidas proporcionalmente entre los 5 dominios, incluyendo la respuesta correcta y su explicación — útil para imprimir o repasar offline.
-- **Generar preguntas desde un PDF**: sube un PDF (apuntes, guía, material del curso), el navegador extrae el texto con pdf.js, y una función serverless llama a la API de Anthropic (Claude) para generar preguntas nuevas en el mismo formato y nivel de dificultad del examen, listas para descargar en Markdown o PDF.
+- **Gestión de usuarios y roles**: lista todas las cuentas registradas y su rol, con botón para quitar/otorgar el rol Admin.
 
 ## Banco de preguntas
 
@@ -30,13 +30,13 @@ Un solo banco de **97 preguntas** repartido en los 5 dominios del examen (18 en 
 - **`CCA-F Simulation.html`** — toda la app: HTML, CSS y JavaScript en un solo archivo (sin frameworks, sin paso de build).
 - **`CCA-F Simulation_files/`** — dependencias vendored: Firebase (App + Firestore, versión compat), jsPDF, y pdf.js (extracción de texto de PDFs en el navegador).
 - **`index.html`** — redirige a `CCA-F Simulation.html`, existe solo porque los hosts de sitios estáticos esperan un `index.html` en la raíz.
-- **`functions/api/generate-questions.js`** — Cloudflare Pages Function (serverless): recibe el texto extraído de un PDF, llama a la API de Anthropic con la key guardada como secreto del lado del servidor (nunca en el código ni en el repo), y devuelve preguntas en formato estructurado.
+- **`functions/api/verify-admin-pin.js`** — Cloudflare Pages Function (serverless): recibe el PIN que un usuario intenta usar para registrarse como Admin y lo compara contra el secreto `ADMIN_PIN` guardado del lado del servidor (nunca en el código ni en el repo).
 - **`staticwebapp.config.json`** — configuración específica de Azure Static Web Apps (host anterior, ver abajo); Cloudflare Pages no la usa.
 - **Firebase Firestore** — guarda usuarios, historial de intentos y el estado de las sesiones Live (código, participantes, progreso). La configuración de Firebase está hardcodeada en el HTML a propósito (es pública por diseño; la seguridad real vive en las reglas de Firestore del proyecto, no en ocultar esos valores).
 
 ## Despliegue
 
-Hospedado en **Cloudflare Pages** (plan Free, sin costo). Se despliega con `wrangler pages deploy` (incluye tanto el sitio estático como la función `functions/api/generate-questions.js`). La API key de Anthropic vive como secreto de Cloudflare (`wrangler pages secret put ANTHROPIC_API_KEY`), no en el repo.
+Hospedado en **Cloudflare Pages** (plan Free, sin costo), conectado directo al repo de GitHub — cualquier push a `main` se despliega solo en 1-2 minutos, sin pasos manuales. La API key de Cloudflare no aplica aquí; lo único que vive como secreto del lado del servidor es el PIN de Admin (`wrangler pages secret put ADMIN_PIN`), no en el repo.
 
 Antes estuvo en Azure Static Web Apps, bajo una suscripción de estudiante compartida con otro proyecto — cuando ese crédito se agotó, la función serverless de Azure quedó bloqueada (el sitio estático seguía funcionando, solo la función se caía). Por eso se migró todo a Cloudflare, que no depende de ningún crédito por tiempo limitado.
 
@@ -44,15 +44,15 @@ Antes estuvo en Azure Static Web Apps, bajo una suscripción de estudiante compa
 
 No requiere build. Basta con abrir `CCA-F Simulation.html` directamente en un navegador (doble clic, o arrastrarlo a una pestaña) para probar cambios de UI/CSS/lógica del examen.
 
-Esto **no** incluye la función "Generar preguntas desde un PDF" — esa vive en `functions/api/generate-questions.js` y necesita el runtime de Cloudflare para responder. Para probarla localmente:
+Esto **no** incluye la verificación del PIN de Admin — esa vive en `functions/api/verify-admin-pin.js` y necesita el runtime de Cloudflare para responder. Para probarla localmente:
 
 ```bash
 npm install -g wrangler
-echo "ANTHROPIC_API_KEY=sk-ant-tu-key-aqui" > .dev.vars
+echo "ADMIN_PIN=tu-pin-aqui" > .dev.vars
 wrangler pages dev . --compatibility-date=2026-01-01
 ```
 
-Esto levanta el sitio completo (estático + función) en `http://localhost:8788`, usando la key que pongas en `.dev.vars` (ese archivo nunca se sube al repo — ya está en `.gitignore`... si no está, agrégalo antes de crear el archivo).
+Esto levanta el sitio completo (estático + función) en `http://localhost:8788`, usando el PIN que pongas en `.dev.vars` (ese archivo nunca se sube al repo — ya está en `.gitignore`... si no está, agrégalo antes de crear el archivo).
 
 ## Clonar el repo y hacer cambios
 
@@ -67,12 +67,7 @@ A partir de ahí, edita `CCA-F Simulation.html` directamente (es un solo archivo
 
 1. Pide acceso de colaborador al repositorio de GitHub (a quien administre `mannticora`).
 2. Haz tus cambios, commitea y sube tu rama / abre un Pull Request.
-3. El despliegue a Cloudflare Pages **es manual** (no hay CI/CD automático todavía) — quien tenga acceso al proyecto de Cloudflare corre:
-   ```bash
-   wrangler login   # o exportar CLOUDFLARE_API_TOKEN si no hay navegador disponible
-   wrangler pages deploy . --project-name=cca-f-apoyo
-   ```
-   Esto requiere ser colaborador del proyecto de Cloudflare (pídele acceso al dueño de la cuenta) o tener un `CLOUDFLARE_API_TOKEN` con permiso de Pages sobre esa cuenta.
+3. Al hacer merge a `main`, Cloudflare Pages despliega solo (está conectado directo al repo) — no hace falta correr nada manualmente.
 
 ### Para desplegar tu propia copia independiente (fork)
 
@@ -85,9 +80,9 @@ Si quieres tu propio sitio (no tocar el de producción), no necesitas acceso a n
    wrangler login
    wrangler pages project create tu-nombre-de-proyecto
    wrangler pages deploy . --project-name=tu-nombre-de-proyecto
-   wrangler pages secret put ANTHROPIC_API_KEY --project-name=tu-nombre-de-proyecto
+   wrangler pages secret put ADMIN_PIN --project-name=tu-nombre-de-proyecto
    ```
-   (la última pide que pegues tu propia API key de [console.anthropic.com](https://console.anthropic.com) — necesitas la tuya, la de este proyecto no es reutilizable).
+   (la última pide que definas tu propio PIN de Admin — necesitas el tuyo, el de este proyecto no es reutilizable).
 4. Tu sitio queda en `https://tu-nombre-de-proyecto.pages.dev`.
 5. **Opcional — Firebase propio**: por defecto la app usa el proyecto de Firebase de INMEGA (usuarios, historial y sesiones Live quedarían mezclados con los del sitio original). Si quieres datos completamente aislados, crea tu propio proyecto en [Firebase Console](https://console.firebase.google.com), y reemplaza el objeto `HARDCODED_FIREBASE_CONFIG` dentro de `CCA-F Simulation.html` (buscar ese nombre en el archivo) con la config de tu proyecto.
 
@@ -96,4 +91,3 @@ Si quieres tu propio sitio (no tocar el de producción), no necesitas acceso a n
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/) (para `npm install -g wrangler`)
 - Una cuenta gratuita de [Cloudflare](https://dash.cloudflare.com/sign-up) (solo si vas a desplegar, no para editar/probar en local)
-- Una API key de [Anthropic](https://console.anthropic.com) (solo si vas a usar/desplegar la función de generar preguntas desde PDF)
