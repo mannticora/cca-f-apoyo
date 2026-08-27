@@ -729,10 +729,13 @@
   <div class="meta-row">
     <span id="live-progress-label">Pregunta 1 de 20</span>
   </div>
+  <div id="live-question-nav-panel" class="question-nav-panel" style="justify-content:flex-start;"></div>
   <div class="question-text" id="live-question-text"></div>
   <div id="live-options-container"></div>
   <div class="nav-row">
-    <button class="primary" id="live-next-btn" disabled="">Selecciona una respuesta</button>
+    <button class="secondary" id="live-back-btn" style="width:auto; flex:0 0 auto;">← Anterior</button>
+    <button class="secondary" id="live-skip-btn" style="width:auto; flex:0 0 auto;">Saltar</button>
+    <button class="primary" id="live-next-btn" style="flex:1;" disabled="">Selecciona una respuesta</button>
   </div>
 </div>
 
@@ -2878,11 +2881,31 @@ function tickLivePersonalTimer() {
   }
 }
 
+function renderLiveQuestionNavPanel() {
+  const panel = el("live-question-nav-panel");
+  panel.innerHTML = "";
+  liveSessionQuestions.forEach((q, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "question-nav-btn" + (liveMyAnswers[i] ? " nav-answered" : "") + (i === liveCurrentQIndex ? " nav-current" : "");
+    b.textContent = (i + 1);
+    b.onclick = () => goToLiveQuestion(i);
+    panel.appendChild(b);
+  });
+}
+
+function goToLiveQuestion(idx) {
+  liveCurrentQIndex = idx;
+  liveAnsweredThisQ = !!liveMyAnswers[idx];
+  renderLiveQuestion(idx);
+}
+
 function renderLiveQuestion(idx) {
   const q = liveSessionQuestions[idx];
   livePendingIdx = null;
   el("live-progress-fill").style.width = Math.round((idx / liveSessionQuestions.length) * 100) + "%";
   el("live-progress-label").textContent = "Pregunta " + (idx + 1) + " de " + liveSessionQuestions.length;
+  renderLiveQuestionNavPanel();
   el("live-question-text").textContent = q.question;
   const container = el("live-options-container");
   container.innerHTML = "";
@@ -2893,6 +2916,8 @@ function renderLiveQuestion(idx) {
     b.onclick = () => handleLiveOptionClick(idx, i);
     container.appendChild(b);
   });
+  el("live-back-btn").disabled = idx === 0;
+  const skipBtn = el("live-skip-btn");
   const nextBtn = el("live-next-btn");
   if (liveAnsweredThisQ) {
     const savedIdx = liveMyAnswers[idx] ? liveMyAnswers[idx].selectedIdx : null;
@@ -2902,9 +2927,11 @@ function renderLiveQuestion(idx) {
         if (i === savedIdx) b.classList.add("selected-pending");
       });
     }
+    skipBtn.classList.add("hidden");
     nextBtn.disabled = false;
     nextBtn.textContent = (idx === liveSessionQuestions.length - 1) ? "Finalizar" : "Siguiente";
   } else {
+    skipBtn.classList.remove("hidden");
     nextBtn.disabled = true;
     nextBtn.textContent = "Selecciona una respuesta";
   }
@@ -2962,6 +2989,21 @@ el("live-next-btn").onclick = async () => {
   liveCurrentQIndex++;
   liveAnsweredThisQ = !!liveMyAnswers[liveCurrentQIndex];
   renderLiveQuestion(liveCurrentQIndex);
+};
+
+el("live-back-btn").onclick = () => {
+  if (liveCurrentQIndex <= 0) return;
+  goToLiveQuestion(liveCurrentQIndex - 1);
+};
+
+el("live-skip-btn").onclick = () => {
+  if (liveAnsweredThisQ) return; // ya respondida: no aplica saltar, se usa "Siguiente"
+  if (liveCurrentQIndex >= liveSessionQuestions.length - 1) {
+    stopLiveQuizPolling();
+    showLiveResults();
+    return;
+  }
+  goToLiveQuestion(liveCurrentQIndex + 1);
 };
 
 async function showLiveResults() {
