@@ -676,6 +676,12 @@
       <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Cuentas registradas y su rol actual. Usa esto para quitar el rol Admin a cualquier cuenta que lo tenga sin haber usado el PIN correcto.</div>
       <div id="admin-users-list" style="font-size:14px; color:var(--grey);"></div>
     </div>
+
+    <div class="card admin-grid-wide">
+      <div class="pill">Dashboard de estudiantes</div>
+      <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">Progreso acumulado de cada cuenta a través de todos sus intentos (exámenes, módulos y sesiones en vivo).</div>
+      <div id="admin-dashboard-wrap" style="font-size:14px; color:var(--grey);"></div>
+    </div>
   </div>
 
   <div id="admin-created-wrap" class="hidden" style="margin-top:20px;">
@@ -1697,6 +1703,22 @@ function installStorageShim() {
         keys.push(stripped);
       });
       return { keys, prefix, shared };
+    },
+    // ---- Solo para el panel Admin: consultas sin el prefijo automático de currentUser ----
+    // Necesario para el dashboard de estudiantes, que debe leer el historial de TODOS los
+    // usuarios, no solo el de quien esté conectado.
+    async listRaw(rawPrefix) {
+      const snap = await fbDb.collection(KV_COLLECTION)
+        .where("fullKey", ">=", rawPrefix)
+        .where("fullKey", "<", rawPrefix + "")
+        .get();
+      const keys = [];
+      snap.forEach(doc => keys.push(doc.data().fullKey));
+      return keys;
+    },
+    async getRaw(fullKey) {
+      const snap = await fbDb.collection(KV_COLLECTION).doc(kvDocId(fullKey)).get();
+      return snap.exists ? snap.data().value : null;
     }
   };
 }
@@ -2002,6 +2024,7 @@ el("menu-admin-panel-btn").onclick = () => {
   showScreen("screen-admin-create");
   renderRecentSessions();
   renderAdminUsers();
+  renderStudentsDashboard();
 };
 
 function renderModulesList() {
@@ -2720,6 +2743,72 @@ async function renderAdminUsers() {
     row.appendChild(btn);
     wrap.appendChild(row);
   });
+}
+
+async function renderStudentsDashboard() {
+  const wrap = el("admin-dashboard-wrap");
+  if (!STORAGE_AVAILABLE) { wrap.textContent = "No disponible."; return; }
+  wrap.textContent = "Cargando...";
+
+  let accountKeys;
+  try { accountKeys = await window.storage.list("account:", true); } catch (e) { accountKeys = null; }
+  const accounts = [];
+  for (const k of (accountKeys && accountKeys.keys) ? accountKeys.keys : []) {
+    try {
+      const r = await window.storage.get(k, true);
+      if (r && r.value) accounts.push(JSON.parse(r.value));
+    } catch (e) {}
+  }
+  if (!accounts.length) { wrap.textContent = "Todavía no hay cuentas registradas."; return; }
+
+  let historyKeys;
+  try { historyKeys = await window.storage.listRaw("personal__"); } catch (e) { historyKeys = []; }
+  const marker = "__history:";
+  const statsByEmail = {};
+  for (const fullKey of historyKeys) {
+    const idx = fullKey.indexOf(marker);
+    if (idx === -1) continue;
+    const email = fullKey.slice("personal__".length, idx);
+    let value = null;
+    try { value = await window.storage.getRaw(fullKey); } catch (e) {}
+    if (!value) continue;
+    let entry;
+    try { entry = JSON.parse(value); } catch (e) { continue; }
+    if (!statsByEmail[email]) statsByEmail[email] = { attempts: 0, pctSum: 0, best: 0, last: 0 };
+    const s = statsByEmail[email];
+    s.attempts++;
+    s.pctSum += entry.pct || 0;
+    s.best = Math.max(s.best, entry.pct || 0);
+    s.last = Math.max(s.last, entry.timestamp || 0);
+  }
+
+  accounts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  wrap.innerHTML = "";
+  const table = document.createElement("table");
+  table.className = "monitor-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Intentos</th><th>Promedio</th><th>Mejor</th><th>Último intento</th></tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  accounts.forEach(acc => {
+    const s = statsByEmail[acc.email];
+    const attempts = s ? s.attempts : 0;
+    const avg = s && s.attempts ? Math.round(s.pctSum / s.attempts) : 0;
+    const best = s ? s.best : 0;
+    const lastStr = s && s.last ? new Date(s.last).toLocaleDateString() : "—";
+    const row = document.createElement("tr");
+    row.innerHTML =
+      "<td>" + (acc.name || "?") + "</td>" +
+      "<td>" + acc.email + "</td>" +
+      "<td>" + (acc.role === "admin" ? "Admin" : "Usuario") + "</td>" +
+      "<td>" + attempts + "</td>" +
+      "<td>" + (attempts ? avg + "%" : "—") + "</td>" +
+      "<td>" + (attempts ? best + "%" : "—") + "</td>" +
+      "<td>" + lastStr + "</td>";
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
 }
 
 async function pollAdminParticipants() {
