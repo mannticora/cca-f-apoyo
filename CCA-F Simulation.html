@@ -543,11 +543,16 @@
     <div class="icon-field-wrap" data-icon="👤">
       <input type="text" id="name-input" placeholder="Tu nombre">
     </div>
+    <div class="field-error" id="name-error">Escribe tu nombre para crear tu cuenta.</div>
     <div class="icon-field-wrap" data-icon="✉">
       <input type="email" id="email-input" placeholder="tu@correo.com">
     </div>
     <div class="field-error" id="email-error">Escribe un correo válido para continuar.</div>
-    <div style="font-size:12px; color:var(--grey); margin:8px 0 16px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, recuperamos tu nombre automáticamente.</div>
+    <div class="icon-field-wrap" data-icon="🔒">
+      <input type="password" id="password-input" placeholder="Contraseña">
+    </div>
+    <div class="field-error" id="password-error">Contraseña incorrecta.</div>
+    <div style="font-size:12px; color:var(--grey); margin:8px 0 16px;">Con esto creamos tu cuenta y guardamos tu historial. Si ya te registraste antes con este correo, usa la misma contraseña para entrar; si es tu primera vez con contraseña, la que escribas ahora quedará guardada para la próxima.</div>
 
     <button class="primary" id="register-btn" style="margin-top:18px;">Entrar</button>
   </div>
@@ -1881,42 +1886,68 @@ function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+// Ahora es el respaldo de identidad (D1), no Firestore: se usa para releer
+// el rol real de la cuenta al retomar una sesión guardada (ver initApp).
 async function findAccountByEmail(email) {
-  if (!STORAGE_AVAILABLE) return null;
   try {
-    const r = await window.storage.get("account:" + email, true);
-    return r ? JSON.parse(r.value) : null;
+    const res = await fetch("/api/accounts/" + encodeURIComponent(email));
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.account || null;
   } catch (e) { return null; }
 }
 
 el("register-btn").onclick = async () => {
   const email = el("email-input").value.trim().toLowerCase();
+  const name = el("name-input").value.trim();
+  const password = el("password-input").value;
   el("email-error").style.display = "none";
+  el("name-error").style.display = "none";
+  el("password-error").style.display = "none";
+
   if (!isValidEmail(email)) {
     el("email-error").style.display = "block";
     el("email-input").focus();
     return;
   }
-  let name = el("name-input").value.trim();
 
-  const existingAccount = await findAccountByEmail(email);
-  if (!name && existingAccount) name = existingAccount.name;
-  if (!name) { el("name-input").focus(); return; }
-
-  // El registro nunca otorga ni quita el rol admin: se conserva el que la cuenta
-  // ya tenía, o se crea como "usuario" si es nueva. Los admins se promueven solo
-  // desde el panel "Gestión de usuarios y roles".
-  currentUser = { name, email, role: existingAccount ? existingAccount.role : "usuario" };
-  if (STORAGE_AVAILABLE) {
-    try {
-      await window.storage.set("account:" + email, JSON.stringify({
-        name, email,
-        role: currentUser.role,
-        createdAt: existingAccount ? existingAccount.createdAt : Date.now(),
-        lastLogin: Date.now()
-      }), true);
-    } catch (e) {}
+  let res, data;
+  try {
+    res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, name, password })
+    });
+    data = await res.json();
+  } catch (e) {
+    el("password-error").textContent = "No se pudo conectar. Intenta de nuevo.";
+    el("password-error").style.display = "block";
+    return;
   }
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      el("password-error").textContent = "Contraseña incorrecta.";
+      el("password-error").style.display = "block";
+      el("password-input").focus();
+    } else if (data.field === "name") {
+      el("name-error").style.display = "block";
+      el("name-input").focus();
+    } else if (data.field === "password") {
+      el("password-error").textContent = data.error;
+      el("password-error").style.display = "block";
+      el("password-input").focus();
+    } else {
+      el("password-error").textContent = data.error || "No se pudo entrar. Intenta de nuevo.";
+      el("password-error").style.display = "block";
+    }
+    return;
+  }
+
+  // El registro nunca otorga ni quita el rol admin: el servidor conserva el que
+  // la cuenta ya tenía, o la crea como "usuario" si es nueva. Los admins se
+  // promueven solo desde el panel "Gestión de usuarios y roles".
+  currentUser = { name: data.name, email: data.email, role: data.role };
   renderMenu();
   saveUserToLocalStorage();
   showScreen("screen-menu");
@@ -2661,10 +2692,15 @@ async function renderRecentSessions() {
 }
 
 async function setAccountRole(email, role) {
-  const account = await findAccountByEmail(email);
-  if (!account) return;
-  account.role = role;
-  await window.storage.set("account:" + email, JSON.stringify(account), true);
+  let res;
+  try {
+    res = await fetch("/api/accounts/" + encodeURIComponent(email) + "/role", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role })
+    });
+  } catch (e) { return; }
+  if (!res.ok) return;
   if (email === currentUser.email) {
     currentUser.role = role;
     saveUserToLocalStorage();
@@ -2674,20 +2710,15 @@ async function setAccountRole(email, role) {
 
 async function renderAdminUsers() {
   const wrap = el("admin-users-list");
-  if (!STORAGE_AVAILABLE) { wrap.textContent = "No disponible."; return; }
   wrap.textContent = "Cargando...";
-  let keys;
+  let accounts = [];
   try {
-    keys = await window.storage.list("account:", true);
-  } catch (e) { keys = null; }
-  const accountKeys = (keys && keys.keys) ? keys.keys : [];
-  const accounts = [];
-  for (const k of accountKeys) {
-    try {
-      const r = await window.storage.get(k, true);
-      if (r && r.value) accounts.push(JSON.parse(r.value));
-    } catch (e) {}
-  }
+    const res = await fetch("/api/accounts");
+    if (res.ok) {
+      const data = await res.json();
+      accounts = data.accounts || [];
+    }
+  } catch (e) {}
   if (!accounts.length) { wrap.textContent = "Todavía no hay cuentas registradas."; return; }
   accounts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   wrap.innerHTML = "";
@@ -2721,15 +2752,11 @@ async function renderStudentsDashboard() {
   if (!STORAGE_AVAILABLE) { wrap.textContent = "No disponible."; return; }
   wrap.textContent = "Cargando...";
 
-  let accountKeys;
-  try { accountKeys = await window.storage.list("account:", true); } catch (e) { accountKeys = null; }
-  const accounts = [];
-  for (const k of (accountKeys && accountKeys.keys) ? accountKeys.keys : []) {
-    try {
-      const r = await window.storage.get(k, true);
-      if (r && r.value) accounts.push(JSON.parse(r.value));
-    } catch (e) {}
-  }
+  let accounts = [];
+  try {
+    const accRes = await fetch("/api/accounts");
+    if (accRes.ok) accounts = (await accRes.json()).accounts || [];
+  } catch (e) {}
 
   let historyKeys;
   try { historyKeys = await window.storage.listRaw("personal__"); } catch (e) { historyKeys = []; }
@@ -3539,13 +3566,11 @@ async function initApp() {
 
   currentUser = savedUser;
   // El rol guardado localmente puede quedar desactualizado (ej. una sesión vieja de prueba
-  // marcada como admin en este navegador). La cuenta real en la base de datos siempre manda.
-  if (STORAGE_AVAILABLE) {
-    const freshAccount = await findAccountByEmail(currentUser.email);
-    if (freshAccount && freshAccount.role && freshAccount.role !== currentUser.role) {
-      currentUser.role = freshAccount.role;
-      saveUserToLocalStorage();
-    }
+  // marcada como admin en este navegador). La cuenta real en D1 siempre manda.
+  const freshAccount = await findAccountByEmail(currentUser.email);
+  if (freshAccount && freshAccount.role && freshAccount.role !== currentUser.role) {
+    currentUser.role = freshAccount.role;
+    saveUserToLocalStorage();
   }
   renderMenu();
 
