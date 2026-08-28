@@ -1665,6 +1665,7 @@ async function extractPdfText(file, onProgress) {
 }
 
 const DOMAIN_COLORS = { D1: "var(--d1)", D2: "var(--d2)", D3: "var(--d3)", D4: "var(--d4)", D5: "var(--d5)" };
+const DOMAIN_ICONS = { D1: "🤖", D2: "🛠️", D3: "💻", D4: "✍️", D5: "🧵" };
 
 
 // ================= Respaldo de almacenamiento con Firebase/Firestore =================
@@ -2035,7 +2036,13 @@ function renderModulesList() {
   domains.forEach(d => {
     const btn = document.createElement("button");
     btn.className = "menu-card";
-    btn.innerHTML = '<div class="menu-card-title">' + d.code + ' &middot; ' + d.name + '</div><div class="menu-card-desc">' + d.questions.length + ' preguntas disponibles en este módulo</div>';
+    btn.innerHTML =
+      '<div class="menu-card-icon" style="--card-accent:' + DOMAIN_COLORS[d.code] + '">' + (DOMAIN_ICONS[d.code] || "🎯") + '</div>' +
+      '<div class="menu-card-body">' +
+        '<div class="menu-card-title">' + d.code + ' &middot; ' + d.name + '</div>' +
+        '<div class="menu-card-desc">' + d.questions.length + ' preguntas disponibles en este módulo</div>' +
+        '<div class="menu-card-meta">Practicar módulo</div>' +
+      '</div>';
     btn.onclick = () => startModuleQuiz(d.code);
     wrap.appendChild(btn);
   });
