@@ -2034,13 +2034,14 @@ function renderModulesList() {
   const wrap = el("modules-list");
   wrap.innerHTML = "";
   domains.forEach(d => {
+    const poolSize = FULL_QUESTION_BANK.filter(q => q.domainCode === d.code).length;
     const btn = document.createElement("button");
     btn.className = "menu-card";
     btn.innerHTML =
       '<div class="menu-card-icon" style="--card-accent:' + DOMAIN_COLORS[d.code] + '">' + (DOMAIN_ICONS[d.code] || "🎯") + '</div>' +
       '<div class="menu-card-body">' +
         '<div class="menu-card-title">' + d.code + ' &middot; ' + d.name + '</div>' +
-        '<div class="menu-card-desc">' + d.questions.length + ' preguntas disponibles en este módulo</div>' +
+        '<div class="menu-card-desc">' + poolSize + ' preguntas disponibles en este módulo</div>' +
         '<div class="menu-card-meta">Practicar módulo</div>' +
       '</div>';
     btn.onclick = () => startModuleQuiz(d.code);
@@ -2055,7 +2056,11 @@ function startModuleQuiz(domainCode) {
   quizModuleCode = domainCode;
   quizModuleName = domain.name;
   userName = currentUser.name || "Anonymous";
-  quizQuestions = shuffle(domain.questions).map(q => Object.assign({ domainCode: domain.code, domainName: domain.name }, q));
+  // Usa el banco completo del dominio (FULL_QUESTION_BANK), no solo las 5
+  // preguntas originales de domains[] — así cada intento puede tocar
+  // cualquiera de las preguntas disponibles para ese módulo, no siempre las mismas 5.
+  const pool = FULL_QUESTION_BANK.filter(q => q.domainCode === domainCode);
+  quizQuestions = shuffle(pool);
   currentIndex = 0;
   userScore = 0;
   quizUserAnswers = [];
